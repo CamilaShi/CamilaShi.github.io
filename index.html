@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checklist Melissa</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="topo-app">
+    <span id="nomeUsuario">Checklist Melissa</span>
+    <button onclick="sair()">Sair</button>
+  </div>
+
+  <div class="conteudo-inicial">
+    <h2 id="saudacao">Bem-vinda</h2>
+    <p>As telas de checklist, cadastros e dashboard entram na próxima etapa.</p>
+  </div>
+
+  <script>
+    window.onload = function () {
+      const email = localStorage.getItem('checklist_email');
+      const nome = localStorage.getItem('checklist_nome');
+
+      if (!email) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      document.getElementById('nomeUsuario').textContent = nome;
+      document.getElementById('saudacao').textContent = 'Bem-vinda, ' + nome;
+    };
+
+    function sair() {
+      localStorage.removeItem('checklist_email');
+      localStorage.removeItem('checklist_nome');
+      localStorage.removeItem('checklist_idPlanilha');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>
