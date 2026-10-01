@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checklist Melissa</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app">
+    <aside class="barra-lateral">
+      <div class="marca">Checklist Melissa</div>
+
+      <button class="nav-item ativo">
+        <span class="nav-icone">&#8962;</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="irPara('checklists.html')">
+        <span class="nav-icone">&#9745;</span> Meus Checklists
+      </button>
+      <button class="nav-item" onclick="irPara('historico.html')">
+        <span class="nav-icone">&#128337;</span> Histórico
+      </button>
+      <button class="nav-item" onclick="irPara('configuracoes.html')">
+        <span class="nav-icone">&#9881;</span> Configurações
+      </button>
+
+      <div class="nav-rodape">
+        <button class="nav-item" onclick="sair()">
+          <span class="nav-icone">&#8594;</span> Sair
+        </button>
+      </div>
+    </aside>
+
+    <main class="conteudo">
+      <div class="banner-boasvindas">
+        <h2 id="saudacao">Bem-vinda</h2>
+        <p>Aqui você acompanha seus checklists e o quanto já realizou.</p>
+      </div>
+
+      <div class="acao-rapida">
+        <div>
+          <h3>Checklist de hoje</h3>
+          <p>Abra seu checklist padrão e marque o que já fez</p>
+        </div>
+        <button class="botao-principal" onclick="irPara('checklists.html')">Abrir</button>
+      </div>
+
+      <div class="grade-cartoes">
+        <div class="cartao-stat cor-verde">
+          <div class="rotulo">Itens concluídos hoje</div>
+          <div class="valor">—</div>
+        </div>
+        <div class="cartao-stat cor-azul">
+          <div class="rotulo">Checklists ativos</div>
+          <div class="valor">—</div>
+        </div>
+        <div class="cartao-stat cor-rosa">
+          <div class="rotulo">% realizado hoje</div>
+          <div class="valor">—</div>
+        </div>
+        <div class="cartao-stat cor-amarelo">
+          <div class="rotulo">Sequência de dias</div>
+          <div class="valor">—</div>
+        </div>
+      </div>
+
+      <div class="secao">
+        <h3>Resumo da semana</h3>
+        <div class="aviso-em-breve">Em breve, assim que os checklists estiverem conectados</div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    window.onload = function () {
+      const email = localStorage.getItem('checklist_email');
+      const nome = localStorage.getItem('checklist_nome');
+
+      if (!email) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      document.getElementById('saudacao').textContent = 'Bem-vinda, ' + nome;
+    };
+
+    function irPara(pagina) {
+      window.location.href = pagina;
+    }
+
+    function sair() {
+      localStorage.removeItem('checklist_email');
+      localStorage.removeItem('checklist_nome');
+      localStorage.removeItem('checklist_idPlanilha');
+      window.location.href = 'login.html';
+    }
+  </script>
+</body>
+</html>
