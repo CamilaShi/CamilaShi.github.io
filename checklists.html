@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Checklists - Checklist Melissa</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="particulas" id="particulas"></div>
+
+  <div class="app">
+    <aside class="barra-lateral">
+      <div class="saudacao-menu" id="saudacaoMenu">Oi! &#128075;</div>
+
+      <nav class="nav-lista">
+        <button class="nav-item" onclick="irPara('index.html')">
+          <span class="nav-icone">&#9671;</span> Dashboard
+        </button>
+        <button class="nav-item ativo">
+          <span class="nav-icone">&#10003;</span> Meus Checklists
+        </button>
+        <button class="nav-item" onclick="irPara('historico.html')">
+          <span class="nav-icone">&#8986;</span> Histórico
+        </button>
+        <button class="nav-item" onclick="irPara('configuracoes.html')">
+          <span class="nav-icone">&#9881;</span> Configurações
+        </button>
+      </nav>
+
+      <div class="nav-rodape">
+        <button class="botao-tema" id="botaoTema" onclick="alternarTema()">&#9728; Modo claro</button>
+        <button class="nav-item" onclick="sair()">
+          <span class="nav-icone">&#8617;</span> Sair
+        </button>
+      </div>
+    </aside>
+
+    <main class="conteudo">
+
+      <!-- VISTA: lista de checklists -->
+      <div id="vistaLista">
+        <div class="topo">
+          <div class="selo-topo">Painel</div>
+          <h1>Meus Checklists</h1>
+        </div>
+        <div class="grade-checklists" id="gradeChecklists">
+          <div class="estado-vazio">Carregando...</div>
+        </div>
+      </div>
+
+      <!-- VISTA: itens de um checklist -->
+      <div id="vistaItens" style="display:none;">
+        <button class="botao-voltar" onclick="voltarParaLista()">&#8592; Voltar para Meus Checklists</button>
+        <div class="painel-itens">
+          <div class="painel-itens-topo">
+            <h2 id="tituloChecklist">Checklist</h2>
+            <span class="widget-tag" id="dataAtual"></span>
+          </div>
+          <div class="acoes-itens" id="acoesNormais">
+            <button class="botao-mini" onclick="marcarTodos(true)">Marcar tudo</button>
+            <button class="botao-mini" onclick="marcarTodos(false)">Limpar tudo</button>
+            <button class="botao-mini" onclick="alternarModoEdicao()">&#9999; Editar</button>
+          </div>
+          <div class="acoes-itens" id="acoesEdicao" style="display:none;">
+            <button class="botao-mini" onclick="renomearChecklistAtual()">Renomear</button>
+            <button class="botao-mini botao-perigo" onclick="excluirChecklistAtual()">Excluir checklist</button>
+            <button class="botao-mini botao-perigo" onclick="excluirSelecionados()">&#128465; Excluir marcados</button>
+            <button class="botao-mini" onclick="alternarModoEdicao()">Concluir edição</button>
+          </div>
+          <div class="lista-itens" id="listaItens">
+            <div class="estado-vazio">Carregando...</div>
+          </div>
+          <div class="linha-novo-item">
+            <input type="text" id="campoNovoItem" placeholder="Novo item...">
+            <button class="botao-mini" onclick="adicionarItem()">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script>
+    let idPlanilha = null;
+    let checklistAtual = null;
+    let itensAtuais = [];
+    let modoEdicao = false;
+    let itensSelecionados = new Set();
+    const dataHoje = new Date().toISOString().substring(0, 10);
+
+    const ICONES = [
+      { chaves: ['dia a dia', 'diario', 'rotina'], icone: '&#8962;' },
+      { chaves: ['viagem', 'mala'], icone: '&#9992;' },
+      { chaves: ['compra', 'mercado'], icone: '&#128722;' },
+      { chaves: ['estudo', 'estudar', 'curso'], icone: '&#128214;' },
+      { chaves: ['trabalho', 'reuniao'], icone: '&#128188;' },
+      { chaves: ['casa', 'limpeza'], icone: '&#127968;' }
+    ];
+
+    function escolherIcone(nome) {
+      const alvo = nome.toLowerCase();
+      for (const item of ICONES) {
+        if (item.chaves.some(c => alvo.indexOf(c) !== -1)) return item.icone;
+      }
+      return '&#10022;';
+    }
+
+    window.onload = function () {
+      const email = localStorage.getItem('checklist_email');
+      const nome = localStorage.getItem('checklist_nome');
+      idPlanilha = localStorage.getItem('checklist_idPlanilha');
+
+      if (!email) {
+        window.location.href = 'login.html';
+        return;
+      }
+
+      document.getElementById('saudacaoMenu').textContent = 'Oi, ' + nome.split(' ')[0] + '! \u{1F44B}';
+      document.getElementById('dataAtual').textContent = dataHoje.split('-').reverse().join('/');
+
+      criarParticulas();
+      carregarChecklists();
+    };
+
+    function irPara(pagina) {
+      window.location.href = pagina;
+    }
+
+    function sair() {
+      localStorage.removeItem('checklist_email');
+      localStorage.removeItem('checklist_nome');
+      localStorage.removeItem('checklist_idPlanilha');
+      window.location.href = 'login.html';
+    }
+
+    function alternarTema() {
+      const raiz = document.documentElement;
+      const atual = raiz.getAttribute('data-theme');
+      const novo = atual === 'dark' ? 'light' : 'dark';
+      raiz.setAttribute('data-theme', novo);
+      document.getElementById('botaoTema').innerHTML = novo === 'dark' ? '&#9728; Modo claro' : '&#9789; Modo escuro';
+    }
+
+    function criarParticulas() {
+      const container = document.getElementById('particulas');
+      const tema = document.documentElement.getAttribute('data-theme');
+      const total = tema === 'light' ? 29 : 22;
+      const faixas = 4;
+      for (let i = 0; i < total; i++) {
+        const p = document.createElement('div');
+        p.className = 'particula';
+        const faixa = i % faixas;
+        const altoMin = faixa * (100 / faixas);
+        const altoMax = altoMin + (100 / faixas);
+        p.style.left = Math.random() * 100 + 'vw';
+        p.style.top = (altoMin + Math.random() * (altoMax - altoMin)) + 'vh';
+        p.style.animationDelay = (Math.random() * 9) + 's';
+        p.style.animationDuration = (7 + Math.random() * 5) + 's';
+        container.appendChild(p);
+      }
+    }
+
+    async function chamarBackend(acao, dadosExtras) {
+      const corpo = Object.assign({ action: acao }, dadosExtras);
+      const resposta = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(corpo)
+      });
+      return resposta.json();
+    }
+
+    async function carregarChecklists() {
+      const grade = document.getElementById('gradeChecklists');
+      const dados = await chamarBackend('listarChecklists', { idPlanilha: idPlanilha });
+
+      if (!dados.ok) {
+        grade.innerHTML = '<div class="estado-vazio">' + dados.erro + '</div>';
+        return;
+      }
+
+      grade.innerHTML = '';
+
+      for (const cl of dados.checklists) {
+        const itens = await chamarBackend('listarItens', { idPlanilha: idPlanilha, idChecklist: cl.id, data: dataHoje });
+        const total = itens.ok ? itens.itens.length : 0;
+        const feitos = itens.ok ? itens.itens.filter(i => i.marcado).length : 0;
+        const pct = total ? Math.round((feitos / total) * 100) : 0;
+
+        const card = document.createElement('div');
+        card.className = 'card-checklist';
+        card.onclick = () => abrirChecklist(cl.id, cl.nome);
+        card.innerHTML =
+          '<div class="widget-titulo"><span class="icone-widget">' + escolherIcone(cl.nome) + '</span> ' + cl.nome + '</div>' +
+          '<div class="card-checklist-progresso"><span style="width:' + pct + '%"></span></div>' +
+          '<div class="card-checklist-rodape"><span>' + feitos + '/' + total + ' feitos</span><span>' + pct + '%</span></div>';
+        grade.appendChild(card);
+      }
+
+      const cardNovo = document.createElement('div');
+      cardNovo.className = 'card-checklist card-novo';
+      cardNovo.onclick = criarChecklist;
+      cardNovo.innerHTML = '<span class="simbolo-novo">+</span>Novo checklist';
+      grade.appendChild(cardNovo);
+    }
+
+    async function criarChecklist() {
+      const nome = prompt('Nome do novo checklist:');
+      if (!nome || !nome.trim()) return;
+      const resultado = await chamarBackend('criarChecklist', { idPlanilha: idPlanilha, nome: nome.trim() });
+      if (!resultado.ok) {
+        alert(resultado.erro);
+        return;
+      }
+      carregarChecklists();
+    }
+
+    async function abrirChecklist(id, nome) {
+      checklistAtual = { id: id, nome: nome };
+      modoEdicao = false;
+      itensSelecionados.clear();
+      document.getElementById('tituloChecklist').textContent = nome;
+      document.getElementById('vistaLista').style.display = 'none';
+      document.getElementById('vistaItens').style.display = 'block';
+      document.getElementById('acoesNormais').style.display = 'flex';
+      document.getElementById('acoesEdicao').style.display = 'none';
+      await carregarItens();
+    }
+
+    function voltarParaLista() {
+      document.getElementById('vistaItens').style.display = 'none';
+      document.getElementById('vistaLista').style.display = 'block';
+      carregarChecklists();
+    }
+
+    function alternarModoEdicao() {
+      modoEdicao = !modoEdicao;
+      itensSelecionados.clear();
+      document.getElementById('acoesNormais').style.display = modoEdicao ? 'none' : 'flex';
+      document.getElementById('acoesEdicao').style.display = modoEdicao ? 'flex' : 'none';
+      renderizarItens();
+    }
+
+    async function carregarItens() {
+      const lista = document.getElementById('listaItens');
+      lista.innerHTML = '<div class="estado-vazio">Carregando...</div>';
+
+      const dados = await chamarBackend('listarItens', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id, data: dataHoje });
+      if (!dados.ok) {
+        lista.innerHTML = '<div class="estado-vazio">' + dados.erro + '</div>';
+        return;
+      }
+
+      itensAtuais = dados.itens;
+      renderizarItens();
+    }
+
+    function renderizarItens() {
+      const lista = document.getElementById('listaItens');
+
+      if (!itensAtuais.length) {
+        lista.innerHTML = '<div class="estado-vazio">Nenhum item ainda. Adicione o primeiro abaixo.</div>';
+        return;
+      }
+
+      lista.innerHTML = '';
+
+      if (modoEdicao) {
+        for (const item of itensAtuais) {
+          const selecionado = itensSelecionados.has(item.id);
+          const linha = document.createElement('div');
+          linha.className = 'item-check item-edicao' + (selecionado ? ' selecionado' : '');
+
+          const caixa = document.createElement('div');
+          caixa.className = 'caixa-check';
+          caixa.innerHTML = selecionado ? '&#10003;' : '';
+          caixa.onclick = () => toggleSelecao(item.id);
+
+          const texto = document.createElement('span');
+          texto.className = 'texto-item';
+          texto.textContent = item.descricao;
+          texto.onclick = () => toggleSelecao(item.id);
+
+          const lixeira = document.createElement('button');
+          lixeira.className = 'icone-lixeira';
+          lixeira.innerHTML = '&#128465;';
+          lixeira.onclick = (ev) => { ev.stopPropagation(); excluirItemUnico(item.id); };
+
+          linha.appendChild(caixa);
+          linha.appendChild(texto);
+          linha.appendChild(lixeira);
+          lista.appendChild(linha);
+        }
+        return;
+      }
+
+      for (const item of itensAtuais) {
+        const linha = document.createElement('div');
+        linha.className = 'item-check' + (item.marcado ? ' marcado' : '');
+        linha.onclick = () => alternarItem(item.id);
+        linha.innerHTML =
+          '<div class="caixa-check">' + (item.marcado ? '&#10003;' : '') + '</div>' +
+          '<span class="texto-item">' + item.descricao + '</span>';
+        lista.appendChild(linha);
+      }
+    }
+
+    function toggleSelecao(idItem) {
+      if (itensSelecionados.has(idItem)) {
+        itensSelecionados.delete(idItem);
+      } else {
+        itensSelecionados.add(idItem);
+      }
+      renderizarItens();
+    }
+
+    async function excluirItemUnico(idItem) {
+      if (!confirm('Excluir este item?')) return;
+      const resultado = await chamarBackend('excluirItem', { idPlanilha: idPlanilha, idItem: idItem });
+      if (!resultado.ok) {
+        alert(resultado.erro);
+        return;
+      }
+      itensSelecionados.delete(idItem);
+      await carregarItens();
+    }
+
+    async function excluirSelecionados() {
+      if (!itensSelecionados.size) {
+        alert('Marque ao menos um item para excluir.');
+        return;
+      }
+      if (!confirm('Excluir ' + itensSelecionados.size + ' item(ns) marcado(s)?')) return;
+
+      for (const idItem of itensSelecionados) {
+        await chamarBackend('excluirItem', { idPlanilha: idPlanilha, idItem: idItem });
+      }
+      itensSelecionados.clear();
+      await carregarItens();
+    }
+
+    async function renomearChecklistAtual() {
+      const nome = prompt('Novo nome do checklist:', checklistAtual.nome);
+      if (!nome || !nome.trim()) return;
+
+      const resultado = await chamarBackend('renomearChecklist', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id, nome: nome.trim() });
+      if (!resultado.ok) {
+        alert(resultado.erro);
+        return;
+      }
+      checklistAtual.nome = nome.trim();
+      document.getElementById('tituloChecklist').textContent = checklistAtual.nome;
+    }
+
+    async function excluirChecklistAtual() {
+      if (!confirm('Excluir o checklist "' + checklistAtual.nome + '"? Os itens deixarão de aparecer.')) return;
+
+      const resultado = await chamarBackend('excluirChecklist', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id });
+      if (!resultado.ok) {
+        alert(resultado.erro);
+        return;
+      }
+      voltarParaLista();
+    }
+
+    async function alternarItem(idItem) {
+      const item = itensAtuais.find(i => i.id === idItem);
+      if (!item) return;
+      item.marcado = !item.marcado;
+      renderizarItens();
+
+      const resultado = await chamarBackend('marcarItem', { idPlanilha: idPlanilha, idItem: idItem, data: dataHoje, marcar: item.marcado });
+      if (!resultado.ok) {
+        item.marcado = !item.marcado;
+        renderizarItens();
+        alert(resultado.erro);
+      }
+    }
+
+    async function marcarTodos(valor) {
+      for (const item of itensAtuais) {
+        item.marcado = valor;
+      }
+      renderizarItens();
+      for (const item of itensAtuais) {
+        await chamarBackend('marcarItem', { idPlanilha: idPlanilha, idItem: item.id, data: dataHoje, marcar: valor });
+      }
+    }
+
+    async function adicionarItem() {
+      const campo = document.getElementById('campoNovoItem');
+      const descricao = campo.value.trim();
+      if (!descricao) return;
+
+      const resultado = await chamarBackend('adicionarItem', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id, descricao: descricao });
+      if (!resultado.ok) {
+        alert(resultado.erro);
+        return;
+      }
+      campo.value = '';
+      await carregarItens();
+    }
+  </script>
+</body>
+</html>
