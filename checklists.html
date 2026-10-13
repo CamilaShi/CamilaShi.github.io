@@ -50,6 +50,11 @@
       </nav>
 
       <div class="nav-rodape">
+        <button class="botao-tema" id="botaoLembretes" onclick="ativarLembretes()">Ativar lembretes</button>
+        <div class="bloco-horario">
+          <select id="horaLembrete" class="select-hora"></select>
+          <button class="botao-mini" onclick="salvarHorarioLembrete()">Salvar horário</button>
+        </div>
         <div class="linha-sair">
           <button class="nav-item" onclick="sair()">
             <span class="nav-icone">&#8617;</span> Sair
@@ -195,6 +200,8 @@
       criarParticulas();
       carregarChecklists();
       identificarUsuarioNotificacoes(email);
+      atualizarBotaoLembretes();
+      preencherSeletorHorario();
     };
 
     function identificarUsuarioNotificacoes(email) {
@@ -206,6 +213,51 @@
 
     function irPara(pagina) {
       window.location.href = pagina;
+    }
+
+    async function ativarLembretes() {
+      try {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        window.OneSignalDeferred.push(async function (OneSignal) {
+          await OneSignal.Notifications.requestPermission();
+          atualizarBotaoLembretes();
+        });
+      } catch (e) {
+        alert('Não foi possível ativar os lembretes agora. Tente de novo em instantes.');
+      }
+    }
+
+    function preencherSeletorHorario() {
+      const select = document.getElementById('horaLembrete');
+      const salvo = localStorage.getItem('checklist_horarioLembrete') || '';
+      for (let h = 6; h <= 22; h++) {
+        const valor = String(h).padStart(2, '0') + ':00';
+        const opcao = document.createElement('option');
+        opcao.value = valor;
+        opcao.textContent = valor;
+        if (valor === salvo) opcao.selected = true;
+        select.appendChild(opcao);
+      }
+    }
+
+    async function salvarHorarioLembrete() {
+      const hora = document.getElementById('horaLembrete').value;
+      const resultado = await chamarBackend('definirLembrete', { idPlanilha: idPlanilha, hora: hora });
+      if (resultado.ok) {
+        localStorage.setItem('checklist_horarioLembrete', hora);
+        alert('Horário salvo! Você vai receber o lembrete às ' + hora + '.');
+      } else {
+        alert('Não foi possível salvar o horário agora. Tente de novo.');
+      }
+    }
+
+    function atualizarBotaoLembretes() {
+      window.OneSignalDeferred = window.OneSignalDeferred || [];
+      window.OneSignalDeferred.push(function (OneSignal) {
+        const ligado = OneSignal.Notifications.permission;
+        const botao = document.getElementById('botaoLembretes');
+        if (botao) botao.textContent = ligado ? 'Lembretes ativados' : 'Ativar lembretes';
+      });
     }
 
     // Pede à usuária autorização pra sua própria agenda do Google. Se ela
