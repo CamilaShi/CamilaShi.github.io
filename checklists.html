@@ -916,18 +916,23 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
         let i = 0;
         let primeiraVez = true;
         while (i < grupo.itens.length) {
+          const alturaTituloNecessaria = primeiraVez ? grupo.alturaTitulo : 0;
           const gapNecessario = colH > 0 ? GAP_ENTRE_SECOES : 0;
-          const espacoParaTituloEPrimeiroItem = grupo.alturaTitulo + gapNecessario + grupo.itens[i].altura;
+          const espacoParaTituloEPrimeiroItem = alturaTituloNecessaria + gapNecessario + grupo.itens[i].altura;
           if (colH > 0 && colH + espacoParaTituloEPrimeiroItem > alturaDisponivelPorPagina) {
             novaColuna();
             continue;
           }
-          const gapFinal = colH > 0 ? GAP_ENTRE_SECOES : 0;
-          const estiloGap = gapFinal ? ' style="margin-top:' + gapFinal + 'px"' : '';
-          const nomeTitulo = primeiraVez ? grupo.nome : grupo.nome + ' (continuação)';
-          paginaAtual[col].push('<div class="pdf-secao-titulo"' + estiloGap + '>' + escapar(nomeTitulo) + '</div>');
-          colH += grupo.alturaTitulo + gapFinal;
-          primeiraVez = false;
+          // O título só é impresso no início da lista; quando a lista
+          // continua numa coluna seguinte, os itens seguem direto, sem
+          // repetir o título.
+          if (primeiraVez) {
+            const gapFinal = colH > 0 ? GAP_ENTRE_SECOES : 0;
+            const estiloGap = gapFinal ? ' style="margin-top:' + gapFinal + 'px"' : '';
+            paginaAtual[col].push('<div class="pdf-secao-titulo"' + estiloGap + '>' + escapar(grupo.nome) + '</div>');
+            colH += grupo.alturaTitulo + gapFinal;
+            primeiraVez = false;
+          }
 
           let colocouAlgum = false;
           while (i < grupo.itens.length) {
