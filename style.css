@@ -1124,6 +1124,24 @@ body.tela-login {
   font-weight: 600;
   color: var(--texto-suave-card);
 }
+.icone-seta-secao {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 18px;
+  border: none;
+  background: transparent;
+  color: var(--texto-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.icone-seta-secao:hover {
+  background: var(--vidro-icone);
+}
 .icone-secao {
   width: 26px;
   height: 26px;

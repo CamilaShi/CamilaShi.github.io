@@ -44,9 +44,6 @@
         <button class="nav-item ativo">
           <span class="nav-icone">&#10003;</span> Meus Checklists
         </button>
-        <button class="nav-item" onclick="irPara('historico.html')">
-          <span class="nav-icone">&#8986;</span> Histórico
-        </button>
         <button class="nav-item" onclick="irPara('configuracoes.html')">
           <span class="nav-icone">&#9881;</span> Configurações
         </button>
@@ -156,6 +153,7 @@
     let idSecaoArrastada = null;
     let listaEditando = false;
     let criandoSecao = false;
+    const secoesRecolhidas = new Set();
     const dataHoje = new Date().toISOString().substring(0, 10);
 
     const ICONES = [
@@ -657,12 +655,25 @@
       contagem.className = 'secao-contagem';
       contagem.textContent = feitos + '/' + total;
 
+      const recolhida = secoesRecolhidas.has(secao.id);
+      const iconeSeta = document.createElement('button');
+      iconeSeta.className = 'icone-seta-secao';
+      iconeSeta.innerHTML = recolhida ? '&#9660;' : '&#9650;';
+      iconeSeta.title = recolhida ? 'Mostrar itens desta lista' : 'Recolher itens desta lista';
+      iconeSeta.onclick = (ev) => {
+        ev.stopPropagation();
+        if (secoesRecolhidas.has(secao.id)) secoesRecolhidas.delete(secao.id);
+        else secoesRecolhidas.add(secao.id);
+        renderizarItens();
+      };
+
       cabecalho.appendChild(alcaSecao);
       cabecalho.appendChild(titulo);
       cabecalho.appendChild(iconeMarcar);
       cabecalho.appendChild(iconeLimpar);
       cabecalho.appendChild(iconeExcluir);
       cabecalho.appendChild(contagem);
+      cabecalho.appendChild(iconeSeta);
       bloco.appendChild(cabecalho);
 
       ativarArrastoSecao(bloco, cabecalho, secao);
@@ -682,29 +693,33 @@
 
       bloco.appendChild(linhaProgresso);
 
-      const listaSecao = document.createElement('div');
-      listaSecao.className = 'secao-itens';
-      if (!itensDaSecao.length) {
-        listaSecao.innerHTML = '<div class="estado-vazio estado-vazio-secao">Nenhum item nesta seção ainda.</div>';
-      } else {
-        for (const item of itensDaSecao) listaSecao.appendChild(criarLinhaItem(item));
-      }
-      bloco.appendChild(listaSecao);
+      // A barra de progresso acima fica sempre visível; só os itens e o
+      // campo de novo item somem quando a seção está recolhida.
+      if (!recolhida) {
+        const listaSecao = document.createElement('div');
+        listaSecao.className = 'secao-itens';
+        if (!itensDaSecao.length) {
+          listaSecao.innerHTML = '<div class="estado-vazio estado-vazio-secao">Nenhum item nesta seção ainda.</div>';
+        } else {
+          for (const item of itensDaSecao) listaSecao.appendChild(criarLinhaItem(item));
+        }
+        bloco.appendChild(listaSecao);
 
-      const linhaNovo = document.createElement('div');
-      linhaNovo.className = 'linha-novo-item linha-novo-item-secao';
-      const campo = document.createElement('input');
-      campo.type = 'text';
-      campo.placeholder = 'Novo item em ' + secao.nome + '...';
-      campo.dataset.secaoId = secao.id;
-      campo.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarItem(secao.id, campo); } };
-      const botao = document.createElement('button');
-      botao.className = 'botao-mini';
-      botao.textContent = '+ Adicionar';
-      botao.onclick = () => adicionarItem(secao.id, campo);
-      linhaNovo.appendChild(campo);
-      linhaNovo.appendChild(botao);
-      bloco.appendChild(linhaNovo);
+        const linhaNovo = document.createElement('div');
+        linhaNovo.className = 'linha-novo-item linha-novo-item-secao';
+        const campo = document.createElement('input');
+        campo.type = 'text';
+        campo.placeholder = 'Novo item em ' + secao.nome + '...';
+        campo.dataset.secaoId = secao.id;
+        campo.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarItem(secao.id, campo); } };
+        const botao = document.createElement('button');
+        botao.className = 'botao-mini';
+        botao.textContent = '+ Adicionar';
+        botao.onclick = () => adicionarItem(secao.id, campo);
+        linhaNovo.appendChild(campo);
+        linhaNovo.appendChild(botao);
+        bloco.appendChild(linhaNovo);
+      }
 
       return bloco;
     }
