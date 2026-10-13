@@ -658,7 +658,7 @@
       const recolhida = secoesRecolhidas.has(secao.id);
       const iconeSeta = document.createElement('button');
       iconeSeta.className = 'icone-seta-secao';
-      iconeSeta.innerHTML = recolhida ? '&#9660;' : '&#9650;';
+      iconeSeta.innerHTML = recolhida ? '&#9661;' : '&#9651;';
       iconeSeta.title = recolhida ? 'Mostrar itens desta lista' : 'Recolher itens desta lista';
       iconeSeta.onclick = (ev) => {
         ev.stopPropagation();
@@ -669,11 +669,11 @@
 
       cabecalho.appendChild(alcaSecao);
       cabecalho.appendChild(titulo);
+      cabecalho.appendChild(iconeSeta);
       cabecalho.appendChild(iconeMarcar);
       cabecalho.appendChild(iconeLimpar);
       cabecalho.appendChild(iconeExcluir);
       cabecalho.appendChild(contagem);
-      cabecalho.appendChild(iconeSeta);
       bloco.appendChild(cabecalho);
 
       ativarArrastoSecao(bloco, cabecalho, secao);
