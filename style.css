@@ -1395,32 +1395,28 @@ input.campo-nova-secao:focus {
   font-weight: 600;
   color: #43583E;
 }
-/* Tabela HTML para o grid de 3 colunas: o Chrome fragmenta linhas de
-   tabela entre páginas de forma muito mais confiável do que
-   grid/multicolunas/inline-block, então o título nunca fica sozinho
-   numa página — o que couber da primeira linha de seções já imprime
-   junto, e o resto continua na página seguinte. Como é uma <tr>, as
-   3 colunas de cada linha sempre começam alinhadas na mesma altura. */
-.pdf-tabela-grade {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
+/* Fluxo "estilo jornal": cada página tem 3 colunas lado a lado, e as
+   seções preenchem a coluna 1 de cima a baixo antes de continuar na
+   coluna 2 e depois na coluna 3 — a altura de cada seção é medida em
+   JS, então a divisão entre colunas e páginas nunca corta uma seção
+   ao meio. */
+.pdf-colunas {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
 }
-.pdf-celula-secao {
-  width: 33.33%;
-  vertical-align: top;
-  padding: 0 14px 72px 0;
+.pdf-coluna {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pdf-secao-bloco {
+  padding-bottom: 32px;
   font-size: 12px;
 }
-/* A última linha da tabela não precisa desse respiro embaixo — ele só
-   serve para separar de uma linha seguinte. Deixando nela, o total podia
-   passar um pouquinho da última página e gerar uma folha extra em
-   branco só por causa dessa sobra. */
-.pdf-tabela-grade tr:last-child .pdf-celula-secao {
-  padding-bottom: 0;
-}
-.pdf-celula-vazia {
-  padding: 0;
+.pdf-medidor {
+  position: absolute;
 }
 .pdf-secao-titulo {
   font-family: 'Inter', sans-serif;
