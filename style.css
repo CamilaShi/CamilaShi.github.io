@@ -1329,21 +1329,52 @@ input.campo-nova-secao:focus {
     display: block !important;
     background: #FFFFFF;
   }
+  /* O cabeçalho fica fixo no topo e se repete em toda página impressa;
+     cada ".pdf-pagina" reserva, com padding-top, o espaço exato da
+     altura dele (calculada em JS) pra o conteúdo nunca ficar escondido
+     atrás dele. */
+  .pdf-cabecalho {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #FFFFFF;
+  }
 }
 
 #areaImpressaoPdf {
   background: #FFFFFF;
   font-family: 'Inter', sans-serif;
   color: #203827;
-  padding: 6px 8px;
+  padding: 0;
 }
 .pdf-cabecalho {
   display: flex;
   align-items: center;
   gap: 14px;
   border-bottom: 2px solid #9C6B42;
-  padding-bottom: 14px;
-  margin-bottom: 20px;
+  padding: 0 8px 14px 8px;
+}
+.pdf-pagina {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 0 8px;
+  break-after: page;
+  page-break-after: always;
+}
+.pdf-pagina:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+.pdf-rodape-pagina {
+  margin-top: auto;
+  margin-bottom: -68px;
+  margin-right: -17px;
+  padding-top: 6px;
+  text-align: right;
+  font-size: 9px;
+  font-weight: 600;
+  color: #43583E;
 }
 .pdf-logo {
   width: 30px;
@@ -1443,5 +1474,5 @@ input.campo-nova-secao:focus {
 }
 @page {
   size: A4 portrait;
-  margin: 6mm;
+  margin: 6mm 6mm 2mm 6mm;
 }
