@@ -1164,7 +1164,7 @@ body.tela-login {
   cursor: pointer;
   flex-shrink: 0;
 }
-.secao-cabecalho .icone-marcar-secao {
+.secao-cabecalho .icone-seta-secao {
   margin-left: auto;
 }
 .secao-progresso-linha {
