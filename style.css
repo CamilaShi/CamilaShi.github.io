@@ -1381,6 +1381,13 @@ input.campo-nova-secao:focus {
   padding: 0 14px 72px 0;
   font-size: 12px;
 }
+/* A última linha da tabela não precisa desse respiro embaixo — ele só
+   serve para separar de uma linha seguinte. Deixando nela, o total podia
+   passar um pouquinho da última página e gerar uma folha extra em
+   branco só por causa dessa sobra. */
+.pdf-tabela-grade tr:last-child .pdf-celula-secao {
+  padding-bottom: 0;
+}
 .pdf-celula-vazia {
   padding: 0;
 }
