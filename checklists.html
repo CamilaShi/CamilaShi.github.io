@@ -848,6 +848,17 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
     // itens do checklist atual, no mesmo estado de check da tela, e
     // chama window.print() para o usuário escolher "Salvar como PDF".
     async function salvarChecklistEmPdf() {
+      // Garante que as fontes da web (Inter/Cormorant Garamond) já estejam
+      // totalmente carregadas antes de medir qualquer altura. Sem isso, se a
+      // fonte ainda não tiver chegado no momento da medição, o texto é
+      // medido com a fonte alternativa do navegador (geralmente mais baixa)
+      // e só troca para a fonte definitiva depois — já com o layout todo
+      // calculado — fazendo cada página parecer "encolhida", com um vão
+      // em branco entre o conteúdo e o rodapé.
+      if (document.fonts && document.fonts.ready) {
+        try { await document.fonts.ready; } catch (erro) { /* segue mesmo assim */ }
+      }
+
       const area = document.getElementById('areaImpressaoPdf');
       const secoes = checklistAtual.secoes || [];
       const itensSemSecao = itensAtuais.filter(i => !i.idSecao);
@@ -1015,7 +1026,7 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
 
       let htmlFinal = cabecalhoHtml;
       paginas.forEach((colunasDaPagina, idxPagina) => {
-        htmlFinal += '<div class="pdf-pagina" style="min-height:' + alturaDisponivelPorPagina + 'px; padding-top:' +
+        htmlFinal += '<div class="pdf-pagina" style="height:' + alturaDisponivelPorPagina + 'px; padding-top:' +
           (alturaCabecalho + GAP_CABECALHO) + 'px;">';
         htmlFinal += '<div class="pdf-colunas">';
         colunasDaPagina.forEach((blocosDaColuna) => {
