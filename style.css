@@ -1403,7 +1403,7 @@ input.campo-nova-secao:focus {
 .pdf-colunas {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 22px;
 }
 .pdf-coluna {
   flex: 0 0 auto;
