@@ -1353,7 +1353,7 @@ input.campo-nova-secao:focus {
   align-items: center;
   gap: 14px;
   border-bottom: 2px solid #9C6B42;
-  padding: 0 8px 14px 8px;
+  padding: 0 8px 2px 8px;
 }
 .pdf-pagina {
   display: flex;
@@ -1406,17 +1406,10 @@ input.campo-nova-secao:focus {
   gap: 14px;
 }
 .pdf-coluna {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-}
-.pdf-secao-bloco {
-  padding-bottom: 32px;
   font-size: 12px;
-}
-.pdf-medidor {
-  position: absolute;
 }
 .pdf-secao-titulo {
   font-family: 'Inter', sans-serif;

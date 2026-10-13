@@ -13,7 +13,7 @@
       document.documentElement.setAttribute('data-theme', 'dark');
     }
   </script>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=12">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script defer src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
   <script>
@@ -808,12 +808,11 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
       const escapar = (texto) => String(texto || '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-      const montarItens = (itens) => itens.map(item =>
+      const montarItem = (item) =>
         '<div class="pdf-item' + (item.marcado ? ' marcado' : '') + '">' +
           '<div class="pdf-caixa">' + (item.marcado ? '&#10003;' : '') + '</div>' +
           '<span class="pdf-texto">' + escapar(item.descricao) + '</span>' +
-        '</div>'
-      ).join('');
+        '</div>';
 
       const cabecalhoHtml = '<div class="pdf-cabecalho">' +
         '<img class="pdf-logo" src="' + LOGO_PDF_BASE64 + '">' +
@@ -821,32 +820,19 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
         '<span class="pdf-data">' + dataHoje.split('-').reverse().join('/') + '</span>' +
       '</div>';
 
-      // Fluxo "estilo jornal": cada seção é um bloco independente, que
-      // preenche a coluna 1 de cima a baixo; quando não cabe mais nada
-      // na coluna 1, continua na coluna 2, depois na coluna 3, e só
-      // então passa pra página seguinte.
-      const montarBlocoSecao = (secao) =>
-        '<div class="pdf-secao-bloco">' +
-          '<div class="pdf-secao-titulo">' + escapar(secao.nome) + '</div>' +
-          montarItens(itensPorSecao[secao.id] || []) +
-        '</div>';
-
-      const blocosHtml = secoes.map(montarBlocoSecao);
-
-      const restoHtml = itensSemSecao.length
-        ? '<div class="pdf-secao-bloco pdf-resto">' +
-            '<div class="pdf-secao-titulo">Itens sem lista</div>' +
-            montarItens(itensSemSecao) +
-          '</div>'
-        : '';
-      if (restoHtml) blocosHtml.push(restoHtml);
+      // Fluxo "estilo jornal": cada lista preenche a coluna 1 de cima a
+      // baixo; quando não cabe mais nada na coluna 1, continua na coluna 2,
+      // depois na coluna 3, e só então passa pra página seguinte. Quando uma
+      // lista não cabe inteira na coluna atual, ela é dividida item a item,
+      // continuando na coluna seguinte com o título marcado "(continuação)".
+      const grupos = secoes.map((secao) => ({ nome: secao.nome, itens: itensPorSecao[secao.id] || [] }));
+      if (itensSemSecao.length) grupos.push({ nome: 'Itens sem lista', itens: itensSemSecao });
 
       // O cabeçalho (logo + nome) se repete fixo em toda página, e cada
       // página ganha o número "Pág X de Y" no rodapé. Como o navegador
       // não dá pra consultar quantas páginas vai ter a impressão, a
-      // gente mesma mede a altura real de cada seção numa área escondida
-      // e decide à mão em qual página/coluna cada uma entra — sem nunca
-      // cortar uma seção ao meio.
+      // gente mesma mede a altura real de cada título/item numa área
+      // escondida e decide à mão em qual página/coluna cada um entra.
       const mmParaPx = 96 / 25.4;
       const GAP_COLUNA = 14;
       const larguraConteudoPx = 198 * mmParaPx; // A4 (210mm) menos 6mm de margem de cada lado
@@ -857,49 +843,114 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
       area.setAttribute(
         'style',
         estiloOriginal + ';display:block !important;position:fixed;left:-9999px;top:0;' +
-        'visibility:hidden;width:' + larguraConteudoPx + 'px;padding:0;margin:0;'
+        'visibility:hidden;width:' + larguraColunaPx + 'px;padding:0;margin:0;'
       );
 
-      area.innerHTML =
-        cabecalhoHtml +
-        '<div class="pdf-medidor" style="width:' + larguraColunaPx + 'px">' + blocosHtml.join('') + '</div>' +
-        '<div class="pdf-rodape-pagina">Pág 1 de 1</div>';
+      let medidorHtml = '';
+      grupos.forEach((grupo, gi) => {
+        medidorHtml += '<div class="pdf-grupo-medida" data-gi="' + gi + '">';
+        medidorHtml += '<div class="pdf-secao-titulo">' + escapar(grupo.nome) + '</div>';
+        grupo.itens.forEach((item) => { medidorHtml += montarItem(item); });
+        medidorHtml += '</div>';
+      });
+      area.innerHTML = cabecalhoHtml + medidorHtml + '<div class="pdf-rodape-pagina">Pág 1 de 1</div>';
 
       const headerEl = area.querySelector('.pdf-cabecalho');
       const alturaCabecalho = headerEl ? headerEl.offsetHeight : 0;
-      const alturasBlocos = Array.from(area.querySelectorAll('.pdf-medidor > .pdf-secao-bloco'))
-        .map((el) => el.offsetHeight);
       const rodapeEl = area.querySelector('.pdf-rodape-pagina');
       const alturaRodape = rodapeEl ? rodapeEl.offsetHeight : 0;
 
+      // offsetHeight não inclui a margem própria do elemento (apenas
+      // borda+padding+conteúdo); como o título da seção tem margin-bottom,
+      // é preciso somar essa margem manualmente, senão a soma acumulada
+      // de várias seções fica menor do que a altura real ocupada e o
+      // empacotamento acaba derramando uma página extra quase em branco.
+      const gruposMedidos = grupos.map((grupo, gi) => {
+        const wrapper = area.querySelector('.pdf-grupo-medida[data-gi="' + gi + '"]');
+        const tituloEl = wrapper.querySelector('.pdf-secao-titulo');
+        const itemEls = Array.from(wrapper.querySelectorAll('.pdf-item'));
+        const margemTitulo = parseFloat(getComputedStyle(tituloEl).marginBottom) || 0;
+        return {
+          nome: grupo.nome,
+          alturaTitulo: tituloEl.offsetHeight + margemTitulo,
+          itens: grupo.itens.map((item, ii) => ({ html: montarItem(item), altura: itemEls[ii].offsetHeight }))
+        };
+      });
+
       area.setAttribute('style', estiloOriginal);
 
-      const GAP_CABECALHO = 18;
+      const GAP_CABECALHO = 0;
+      const GAP_ENTRE_SECOES = 40;
       const MARGEM_SEGURANCA = 24;
       const alturaDisponivelPorPagina = alturaConteudoPx - alturaCabecalho - GAP_CABECALHO - alturaRodape - MARGEM_SEGURANCA;
 
-      // Empacota os blocos nas 3 colunas de cada página, no estilo jornal.
+      // Empacota título+itens nas 3 colunas de cada página, no estilo
+      // jornal, dividindo uma lista no meio (por item) quando necessário.
       const paginas = [];
       let paginaAtual = [[], [], []];
-      let colAtual = 0;
-      let alturaColAtual = 0;
-      const novaPagina = () => {
-        paginas.push(paginaAtual);
-        paginaAtual = [[], [], []];
-        colAtual = 0;
-        alturaColAtual = 0;
+      let col = 0;
+      let colH = 0;
+      const novaColuna = () => {
+        col++;
+        colH = 0;
+        if (col > 2) {
+          paginas.push(paginaAtual);
+          paginaAtual = [[], [], []];
+          col = 0;
+        }
       };
-      blocosHtml.forEach((html, idx) => {
-        const altura = alturasBlocos[idx];
-        if (alturaColAtual > 0 && alturaColAtual + altura > alturaDisponivelPorPagina) {
-          colAtual++;
-          alturaColAtual = 0;
-          if (colAtual > 2) {
-            novaPagina();
+
+      gruposMedidos.forEach((grupo) => {
+        if (grupo.itens.length === 0) {
+          const gap = colH > 0 ? GAP_ENTRE_SECOES : 0;
+          if (colH > 0 && colH + gap + grupo.alturaTitulo > alturaDisponivelPorPagina) {
+            novaColuna();
+          }
+          const gapFinal = colH > 0 ? GAP_ENTRE_SECOES : 0;
+          const estiloGap = gapFinal ? ' style="margin-top:' + gapFinal + 'px"' : '';
+          paginaAtual[col].push('<div class="pdf-secao-titulo"' + estiloGap + '>' + escapar(grupo.nome) + '</div>');
+          colH += grupo.alturaTitulo + gapFinal;
+          return;
+        }
+
+        let i = 0;
+        let primeiraVez = true;
+        while (i < grupo.itens.length) {
+          const gapNecessario = colH > 0 ? GAP_ENTRE_SECOES : 0;
+          const espacoParaTituloEPrimeiroItem = grupo.alturaTitulo + gapNecessario + grupo.itens[i].altura;
+          if (colH > 0 && colH + espacoParaTituloEPrimeiroItem > alturaDisponivelPorPagina) {
+            novaColuna();
+            continue;
+          }
+          const gapFinal = colH > 0 ? GAP_ENTRE_SECOES : 0;
+          const estiloGap = gapFinal ? ' style="margin-top:' + gapFinal + 'px"' : '';
+          const nomeTitulo = primeiraVez ? grupo.nome : grupo.nome + ' (continuação)';
+          paginaAtual[col].push('<div class="pdf-secao-titulo"' + estiloGap + '>' + escapar(nomeTitulo) + '</div>');
+          colH += grupo.alturaTitulo + gapFinal;
+          primeiraVez = false;
+
+          let colocouAlgum = false;
+          while (i < grupo.itens.length) {
+            const item = grupo.itens[i];
+            if (colH + item.altura > alturaDisponivelPorPagina) {
+              if (!colocouAlgum) {
+                paginaAtual[col].push(item.html);
+                colH += item.altura;
+                i++;
+                colocouAlgum = true;
+              }
+              break;
+            }
+            paginaAtual[col].push(item.html);
+            colH += item.altura;
+            i++;
+            colocouAlgum = true;
+          }
+
+          if (i < grupo.itens.length) {
+            novaColuna();
           }
         }
-        paginaAtual[colAtual].push(html);
-        alturaColAtual += altura;
       });
       paginas.push(paginaAtual);
 
@@ -911,7 +962,7 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
           (alturaCabecalho + GAP_CABECALHO) + 'px;">';
         htmlFinal += '<div class="pdf-colunas">';
         colunasDaPagina.forEach((blocosDaColuna) => {
-          htmlFinal += '<div class="pdf-coluna">' + blocosDaColuna.join('') + '</div>';
+          htmlFinal += '<div class="pdf-coluna" style="width:' + larguraColunaPx + 'px">' + blocosDaColuna.join('') + '</div>';
         });
         htmlFinal += '</div>';
         htmlFinal += '<div class="pdf-rodape-pagina">Pág ' + (idxPagina + 1) + ' de ' + totalPaginas + '</div>';
