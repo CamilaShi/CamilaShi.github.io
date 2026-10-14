@@ -741,6 +741,11 @@ body.tela-login {
   box-shadow: 3px 3px 8px var(--sombra-escura), -3px -3px 8px var(--sombra-clara);
   color: var(--texto-dourado-card);
 }
+.icone-widget svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
 .widget-tag { font-size: 10.5px; color: var(--texto-suave-card); letter-spacing: 1px; font-weight: 600; }
 
 .barras-semana { display: flex; align-items: flex-end; justify-content: space-between; height: 90px; gap: 8px; margin-bottom: 10px; }
