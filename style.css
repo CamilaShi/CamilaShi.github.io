@@ -71,7 +71,7 @@
   --item-fundo: rgba(124, 143, 110, 0.22);
 
   --botao-mini-bg: var(--sage-escuro);
-  --botao-mini-texto: #F5F1E5;
+  --botao-mini-texto: var(--pergaminho);
   --progresso-cor1: var(--marrom-claro);
   --progresso-cor2: var(--marrom);
 
@@ -627,7 +627,18 @@ body.tela-login {
 :root[data-theme="light"] .select-hora,
 :root[data-theme="light"] .botao-widget,
 :root[data-theme="light"] .botao-salvar {
-  color: #FFFFFF;
+  color: var(--pergaminho);
+}
+
+/* Mesmo padrão no tema escuro: os ícones/textos que saíam esverdeados ou
+   dourados nesses mesmos lugares passam a usar o bege padrão (igual o
+   botão "Meus Checklists" ativo, que já usava essa cor). */
+:root[data-theme="dark"] .nav-item .nav-icone,
+:root[data-theme="dark"] .botao-tema,
+:root[data-theme="dark"] .icone-widget,
+:root[data-theme="dark"] .icone-menu-item:hover,
+:root[data-theme="dark"] .icone-menu-item.aberto {
+  color: var(--pergaminho);
 }
 
 /* ===== CONTEÚDO ===== */
