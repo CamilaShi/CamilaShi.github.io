@@ -158,7 +158,14 @@
             <div class="acoes-itens-esquerda">
               <button class="botao-mini" onclick="marcarTodos(true)">Marcar tudo</button>
               <button class="botao-mini" onclick="marcarTodos(false)">Limpar tudo</button>
-              <button class="botao-mini botao-historico" id="botaoSalvarHistorico" onclick="salvarNoHistorico()">&#128190; Salvar no histórico</button>
+              <button class="botao-mini botao-historico" id="botaoSalvarHistorico" onclick="salvarNoHistorico()">
+                <svg class="icone-salvar-historico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                  <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"></path>
+                  <path d="M8 4v5h7V4"></path>
+                  <rect x="7.5" y="13" width="9" height="6"></rect>
+                </svg>
+                Salvar no histórico
+              </button>
             </div>
           </div>
           <div class="lista-itens" id="listaItens">

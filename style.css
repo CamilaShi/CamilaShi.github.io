@@ -1145,9 +1145,18 @@ body.tela-login {
 
 /* ===== Botão "Salvar no histórico" (ação manual, separada de Marcar tudo) ===== */
 .botao-historico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   border: 1px dashed var(--borda-dourada);
   color: var(--texto-dourado-card);
+}
+.icone-salvar-historico {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: block;
 }
 
 /* ===== Tela de Histórico ===== */
