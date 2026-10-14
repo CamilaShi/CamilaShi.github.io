@@ -490,17 +490,16 @@ body.tela-login {
   background: linear-gradient(135deg, var(--classico), var(--antigo));
   color: var(--floresta);
   box-shadow: none;
+  font-weight: 700;
+}
+.nav-item.ativo .nav-icone svg {
+  stroke-width: 2.6;
 }
 
 /* Tema escuro: ícone do item de menu selecionado na cor verde do fundo
-   dos cards (resto do botão continua igual: fundo dourado, borda), com
-   traço mais grosso pra não ficar fraco em cima do dourado. */
+   dos cards (resto do botão continua igual: fundo dourado, borda). */
 :root[data-theme="dark"] .nav-item.ativo .nav-icone {
   color: var(--abismo);
-  font-weight: 700;
-}
-:root[data-theme="dark"] .nav-item.ativo .nav-icone svg {
-  stroke-width: 2.6;
 }
 
 /* Tema claro: fundo do ícone em verde-floresta (escuro) com o ícone
