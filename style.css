@@ -472,6 +472,11 @@ body.tela-login {
   flex-shrink: 0;
   color: var(--pergaminho);
 }
+.nav-item .nav-icone svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
 
 .nav-item.ativo {
   color: var(--pergaminho);
@@ -616,6 +621,17 @@ body.tela-login {
   background: var(--pergaminho);
 }
 
+/* Tema escuro: mesmo padrão do tema claro — fundo do ícone igual ao
+   fundo do card por trás dele (só a borda dourada e o ícone aparecem). */
+:root[data-theme="dark"] .icone-renomear,
+:root[data-theme="dark"] .icone-lixeira,
+:root[data-theme="dark"] .icone-marcar-secao,
+:root[data-theme="dark"] .icone-limpar-secao,
+:root[data-theme="dark"] .icone-pdf,
+:root[data-theme="dark"] .icone-config {
+  background: transparent;
+}
+
 /* Texto/ícone branco em cima de todo fundo marrom (var(--vidro-icone) no
    tema claro) — no tema escuro essa mesma variável já é verde escura, não
    marrom, então fica como estava. */
@@ -633,12 +649,19 @@ body.tela-login {
 /* Mesmo padrão no tema escuro: os ícones/textos que saíam esverdeados ou
    dourados nesses mesmos lugares passam a usar o bege padrão (igual o
    botão "Meus Checklists" ativo, que já usava essa cor). */
-:root[data-theme="dark"] .nav-item .nav-icone,
 :root[data-theme="dark"] .botao-tema,
 :root[data-theme="dark"] .icone-widget,
 :root[data-theme="dark"] .icone-menu-item:hover,
 :root[data-theme="dark"] .icone-menu-item.aberto {
   color: var(--pergaminho);
+}
+
+/* Ícones do menu lateral (Dashboard, Meus Checklists, Histórico,
+   Configurações, Sair): mesma cor dourada e mesmo tamanho para todos,
+   no tema escuro. O item ativo mantém seu próprio estilo (fundo em
+   degradê dourado), definido logo abaixo. */
+:root[data-theme="dark"] .nav-item .nav-icone {
+  color: var(--texto-dourado-card);
 }
 
 /* ===== CONTEÚDO ===== */
