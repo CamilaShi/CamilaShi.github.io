@@ -173,6 +173,40 @@
     </main>
   </div>
 
+  <div class="janela-overlay" id="janelaConfigChecklist" style="display:none;">
+    <div class="janela-config">
+      <h2 id="tituloConfigChecklist">Configurações</h2>
+      <p class="subtitulo">Só valem pra este checklist.</p>
+
+      <div class="linha-opcao">
+        <div class="opcao-texto">
+          <strong>Registrar no histórico</strong>
+          <span>Guarda uma linha no Histórico com data, hora e o que estava marcado.</span>
+        </div>
+        <label class="interruptor">
+          <input type="checkbox" id="toggleRegistrarHistorico">
+          <span class="interruptor-trilho"><span class="interruptor-bola"></span></span>
+        </label>
+      </div>
+
+      <div class="linha-opcao">
+        <div class="opcao-texto">
+          <strong>Zerar os itens todo dia</strong>
+          <span>De madrugada, desmarca tudo sozinho — pra checklists que você refaz todo dia, como o Dia a Dia. Desligado, o item continua marcado nos dias seguintes até você desmarcar ou clicar em "Limpar tudo" — pra checklists como o de Viagem.</span>
+        </div>
+        <label class="interruptor">
+          <input type="checkbox" id="toggleZerarDiario">
+          <span class="interruptor-trilho"><span class="interruptor-bola"></span></span>
+        </label>
+      </div>
+
+      <div class="janela-botoes">
+        <button class="botao-fechar" onclick="fecharConfigChecklist()">Cancelar</button>
+        <button class="botao-salvar" onclick="salvarConfigChecklist()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="config.js"></script>
   <script>
     let idPlanilha = null;
@@ -440,9 +474,128 @@
       document.getElementById('tituloChecklist').textContent = checklistAtual.nome;
       document.getElementById('botaoEditarLista').classList.remove('ativo');
       document.getElementById('vistaLista').style.display = 'none';
+      document.getElementById('vistaHistorico').style.display = 'none';
       document.getElementById('vistaItens').style.display = 'block';
+      atualizarNavAtiva('navMeusChecklists');
       renderizarItens();
       configurarLinhaAgenda();
+    }
+
+    function atualizarNavAtiva(idAtivo) {
+      document.getElementById('navMeusChecklists').classList.toggle('ativo', idAtivo === 'navMeusChecklists');
+      document.getElementById('navHistorico').classList.toggle('ativo', idAtivo === 'navHistorico');
+    }
+
+    function mostrarListaPrincipal() {
+      document.getElementById('vistaItens').style.display = 'none';
+      document.getElementById('vistaHistorico').style.display = 'none';
+      document.getElementById('vistaLista').style.display = 'block';
+      atualizarNavAtiva('navMeusChecklists');
+      renderizarGrade();
+    }
+
+    // ===== Histórico (registros manuais de "Salvar no histórico") =====
+
+    async function abrirHistorico() {
+      document.getElementById('vistaLista').style.display = 'none';
+      document.getElementById('vistaItens').style.display = 'none';
+      document.getElementById('vistaHistorico').style.display = 'block';
+      atualizarNavAtiva('navHistorico');
+
+      const lista = document.getElementById('listaHistorico');
+      lista.innerHTML = '<div class="estado-vazio">Carregando...</div>';
+
+      const dados = await chamarBackend('obterHistorico', { idPlanilha: idPlanilha });
+      if (!dados.ok) {
+        lista.innerHTML = '<div class="estado-vazio">' + dados.erro + '</div>';
+        return;
+      }
+      renderizarHistorico(dados.entradas);
+    }
+
+    function renderizarHistorico(entradas) {
+      const lista = document.getElementById('listaHistorico');
+
+      if (!entradas.length) {
+        lista.innerHTML = '<div class="estado-vazio">Ainda não há nada salvo no histórico. Abra um checklist e use o botão "Salvar no histórico".</div>';
+        return;
+      }
+
+      let html = '<table class="tabela-historico"><thead><tr>' +
+        '<th>Checklist</th><th>Itens</th><th>Data</th><th>Hora</th>' +
+        '</tr></thead><tbody>';
+
+      for (const linha of entradas) {
+        const completo = linha.itensTotal > 0 && linha.itensMarcados === linha.itensTotal;
+        const classePill = completo ? 'pill-concluido' : 'pill-parcial';
+        const textoPill = completo
+          ? '&#10003; Concluído'
+          : linha.itensMarcados + '/' + linha.itensTotal + ' itens';
+
+        html += '<tr>' +
+          '<td class="td-nome">' + linha.nomeChecklist + '</td>' +
+          '<td><span class="pill-status ' + classePill + '">' + textoPill + '</span></td>' +
+          '<td>' + linha.data.split('-').reverse().join('/') + '</td>' +
+          '<td class="td-horario">' + linha.hora + '</td>' +
+          '</tr>';
+      }
+
+      html += '</tbody></table>';
+      lista.innerHTML = html;
+    }
+
+    // ===== Configurações do checklist (Registrar no histórico / Zerar diário) =====
+
+    function abrirConfigChecklist() {
+      document.getElementById('tituloConfigChecklist').textContent = 'Configurações — ' + checklistAtual.nome;
+      document.getElementById('toggleRegistrarHistorico').checked = checklistAtual.registrarHistorico !== false;
+      document.getElementById('toggleZerarDiario').checked = checklistAtual.zerarDiario !== false;
+      document.getElementById('janelaConfigChecklist').style.display = 'flex';
+    }
+
+    function fecharConfigChecklist() {
+      document.getElementById('janelaConfigChecklist').style.display = 'none';
+    }
+
+    function salvarConfigChecklist() {
+      const registrarHistorico = document.getElementById('toggleRegistrarHistorico').checked;
+      const zerarDiario = document.getElementById('toggleZerarDiario').checked;
+
+      checklistAtual.registrarHistorico = registrarHistorico;
+      checklistAtual.zerarDiario = zerarDiario;
+      fecharConfigChecklist();
+
+      chamarBackendEmSegundoPlano('definirConfigChecklist', {
+        idPlanilha: idPlanilha,
+        idChecklist: checklistAtual.id,
+        registrarHistorico: registrarHistorico,
+        zerarDiario: zerarDiario
+      }, function (mensagem) {
+        alert('Não foi possível salvar as configurações: ' + mensagem);
+      });
+    }
+
+    // Ação manual e deliberada: registra no Histórico a data/hora de agora e
+    // quantos itens estão marcados neste momento, SEM mexer nos itens. Existe
+    // justamente pra quando o checklist nunca fica 100% (ex.: Viagem), mas a
+    // usuária já fez o que dava pra fazer hoje e quer deixar isso registrado.
+    function salvarNoHistorico() {
+      const botao = document.getElementById('botaoSalvarHistorico');
+      const textoOriginal = botao.innerHTML;
+      botao.disabled = true;
+
+      chamarBackend('salvarHistorico', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id }).then(function (resultado) {
+        botao.disabled = false;
+        if (!resultado.ok) {
+          alert(resultado.erro || 'Não foi possível salvar no histórico.');
+          return;
+        }
+        botao.textContent = '✓ Salvo às ' + resultado.hora;
+        setTimeout(function () { botao.innerHTML = textoOriginal; }, 2500);
+      }).catch(function () {
+        botao.disabled = false;
+        alert('Falha de conexão ao salvar no histórico.');
+      });
     }
 
     function preencherSeletorHorarioAgenda() {
@@ -541,6 +694,7 @@
     function voltarParaLista() {
       document.getElementById('vistaItens').style.display = 'none';
       document.getElementById('vistaLista').style.display = 'block';
+      atualizarNavAtiva('navMeusChecklists');
       renderizarGrade();
     }
 
