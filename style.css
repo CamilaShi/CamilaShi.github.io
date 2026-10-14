@@ -611,7 +611,8 @@ body.tela-login {
 :root[data-theme="light"] .icone-lixeira,
 :root[data-theme="light"] .icone-marcar-secao,
 :root[data-theme="light"] .icone-limpar-secao,
-:root[data-theme="light"] .icone-pdf {
+:root[data-theme="light"] .icone-pdf,
+:root[data-theme="light"] .icone-config {
   background: var(--pergaminho);
 }
 
@@ -1028,7 +1029,8 @@ body.tela-login {
 
 .icone-lixeira,
 .icone-renomear,
-.icone-pdf {
+.icone-pdf,
+.icone-config {
   width: 34px;
   height: 34px;
   border-radius: 10px;
@@ -1044,7 +1046,8 @@ body.tela-login {
 }
 .icone-lixeira:hover,
 .icone-renomear:hover,
-.icone-pdf:hover {
+.icone-pdf:hover,
+.icone-config:hover {
   transform: translateY(-1px);
 }
 
@@ -1063,6 +1066,128 @@ body.tela-login {
   background: var(--vidro-icone);
 }
 .icone-pdf svg { display: block; width: 18px; height: 18px; }
+
+.icone-config {
+  background: var(--vidro-icone);
+  color: var(--texto-dourado-card);
+}
+.icone-config svg { display: block; width: 18px; height: 18px; }
+
+/* ===== Janela de configurações do checklist (histórico / zerar diário) ===== */
+.janela-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 30, 20, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.janela-config {
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  background: var(--cartao-bg);
+  border: 1px solid var(--cartao-borda);
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+}
+.janela-config h2 {
+  font-family: var(--fonte-titulo);
+  font-size: 20px;
+  margin: 0 0 4px;
+  color: var(--texto-card);
+}
+.janela-config .subtitulo {
+  font-size: 12px;
+  color: var(--texto-suave-card);
+  margin: 0 0 20px;
+}
+.linha-opcao {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--borda-dourada);
+}
+.linha-opcao:first-of-type { border-top: none; }
+.opcao-texto strong { display: block; font-size: 13.5px; color: var(--texto-card); font-weight: 700; margin-bottom: 3px; }
+.opcao-texto span { display: block; font-size: 11.5px; color: var(--texto-suave-card); line-height: 1.5; }
+.janela-botoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.botao-fechar {
+  background: transparent;
+  border: 1px solid var(--borda-dourada);
+  color: var(--texto-suave-card);
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-family: var(--fonte-base);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.botao-salvar {
+  background: var(--vidro-icone);
+  color: var(--pergaminho);
+  border: 1px solid var(--borda-dourada);
+  padding: 9px 20px;
+  border-radius: 999px;
+  font-family: var(--fonte-base);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ===== Botão "Salvar no histórico" (ação manual, separada de Marcar tudo) ===== */
+.botao-historico {
+  background: transparent;
+  border: 1px dashed var(--borda-dourada);
+  color: var(--texto-dourado-card);
+}
+
+/* ===== Tela de Histórico ===== */
+.cartao-historico {
+  background: var(--vidro-card);
+  backdrop-filter: blur(3px) saturate(130%);
+  -webkit-backdrop-filter: blur(3px) saturate(130%);
+  border: 1px solid var(--borda-dourada);
+  border-radius: 24px;
+  padding: 6px 10px 14px 10px;
+  box-shadow: 8px 8px 20px var(--sombra-escura), -6px -6px 16px var(--sombra-clara), inset 0 1px 0 var(--vidro-realce);
+}
+.tabela-historico { width: 100%; border-collapse: collapse; }
+.tabela-historico thead th {
+  text-align: left;
+  font-size: 10.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--texto-suave-card);
+  font-weight: 700;
+  padding: 16px 16px 10px 16px;
+}
+.tabela-historico tbody tr { border-top: 1px solid var(--borda-dourada); }
+.tabela-historico tbody td { padding: 14px 16px; font-size: 13px; color: var(--texto-card); font-weight: 500; vertical-align: middle; }
+.td-nome { font-family: var(--fonte-titulo); font-size: 17px; font-weight: 700; color: var(--texto-dourado-card); }
+.pill-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.pill-concluido { background: var(--item-fundo); color: var(--texto-suave-card); }
+.pill-parcial { background: rgba(184,146,63,0.18); color: #9C6B42; }
+:root[data-theme="dark"] .pill-parcial { background: rgba(212,176,106,0.18); color: #DFC592; }
+.td-horario { font-weight: 700; color: var(--texto-dourado-card); white-space: nowrap; }
 
 .alca-arrastar {
   cursor: grab;
