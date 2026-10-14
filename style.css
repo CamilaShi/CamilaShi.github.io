@@ -616,6 +616,20 @@ body.tela-login {
   background: var(--pergaminho);
 }
 
+/* Texto/ícone branco em cima de todo fundo marrom (var(--vidro-icone) no
+   tema claro) — no tema escuro essa mesma variável já é verde escura, não
+   marrom, então fica como estava. */
+:root[data-theme="light"] .nav-item .nav-icone,
+:root[data-theme="light"] .botao-tema,
+:root[data-theme="light"] .icone-widget,
+:root[data-theme="light"] .icone-menu-item:hover,
+:root[data-theme="light"] .icone-menu-item.aberto,
+:root[data-theme="light"] .select-hora,
+:root[data-theme="light"] .botao-widget,
+:root[data-theme="light"] .botao-salvar {
+  color: #FFFFFF;
+}
+
 /* ===== CONTEÚDO ===== */
 .conteudo { position: relative; z-index: 1; flex: 1; min-width: 0; }
 
