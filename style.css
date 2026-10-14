@@ -492,6 +492,22 @@ body.tela-login {
   box-shadow: none;
 }
 
+/* Tema escuro: ícone do item de menu selecionado na cor verde do fundo
+   dos cards (resto do botão continua igual: fundo dourado, borda). */
+:root[data-theme="dark"] .nav-item.ativo .nav-icone {
+  color: var(--esmeralda);
+}
+
+/* Tema claro: fundo do ícone em verde-floresta (escuro) com o ícone
+   bege, e a borda lateral do item na mesma cor do fundo do ícone. */
+:root[data-theme="light"] .nav-item.ativo .nav-icone {
+  background: var(--floresta);
+  color: var(--pergaminho);
+}
+:root[data-theme="light"] .nav-item.ativo {
+  border-left-color: var(--floresta);
+}
+
 .nav-rodape { margin-top: auto; padding-top: 18px; display: flex; flex-direction: column; gap: 8px; }
 
 .botao-tema {
