@@ -496,7 +496,7 @@ body.tela-login {
    dos cards (resto do botão continua igual: fundo dourado, borda), com
    traço mais grosso pra não ficar fraco em cima do dourado. */
 :root[data-theme="dark"] .nav-item.ativo .nav-icone {
-  color: var(--esmeralda);
+  color: var(--abismo);
   font-weight: 700;
 }
 :root[data-theme="dark"] .nav-item.ativo .nav-icone svg {
