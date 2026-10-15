@@ -598,7 +598,7 @@
       }
 
       let html = '<table class="tabela-historico"><thead><tr>' +
-        '<th>Checklist</th><th>Itens</th><th>Data</th><th>Hora</th>' +
+        '<th>Checklist</th><th>Itens</th><th>Data e hora</th>' +
         '</tr></thead><tbody>';
 
       for (const linha of entradas) {
@@ -607,12 +607,12 @@
         const textoPill = completo
           ? '&#10003; Concluído'
           : linha.itensMarcados + '/' + linha.itensTotal + ' itens';
+        const dataHora = linha.data.split('-').reverse().join('/') + ' - ' + linha.hora;
 
         html += '<tr>' +
           '<td class="td-nome">' + linha.nomeChecklist + '</td>' +
           '<td><span class="pill-status ' + classePill + '">' + textoPill + '</span></td>' +
-          '<td>' + linha.data.split('-').reverse().join('/') + '</td>' +
-          '<td class="td-horario">' + linha.hora + '</td>' +
+          '<td class="td-horario">' + dataHora + '</td>' +
           '</tr>';
       }
 
