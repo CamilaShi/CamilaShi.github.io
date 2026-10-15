@@ -660,6 +660,36 @@ body.tela-login {
   color: var(--texto-suave-card);
   margin-right: auto;
 }
+.icone-agenda-link {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--borda-dourada);
+  background: var(--vidro-icone);
+  color: var(--texto-dourado-card);
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+}
+.icone-agenda-link:hover {
+  transform: translateY(-1px);
+}
+.icone-agenda-link svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+:root[data-theme="light"] .icone-agenda-link {
+  background: var(--pergaminho);
+  color: var(--texto-dourado-card);
+}
+:root[data-theme="dark"] .icone-agenda-link {
+  background: transparent;
+}
 
 /* Interruptor (toggle) de avisar na agenda, no mesmo tom dourado usado
    pros itens marcados e pela barra de progresso. */
