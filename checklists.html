@@ -198,14 +198,17 @@
             <div class="acoes-itens-esquerda">
               <button class="botao-mini" onclick="marcarTodos(true)">Marcar tudo</button>
               <button class="botao-mini" onclick="marcarTodos(false)">Limpar tudo</button>
-              <button class="botao-mini botao-historico" id="botaoSalvarHistorico" onclick="salvarNoHistorico()">
-                <svg class="icone-salvar-historico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
-                  <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"></path>
-                  <path d="M8 4v5h7V4"></path>
-                  <rect x="7.5" y="13" width="9" height="6"></rect>
-                </svg>
-                Salvar no histórico
-              </button>
+              <div class="bloco-botao-historico">
+                <button class="botao-mini botao-historico" id="botaoSalvarHistorico" onclick="salvarNoHistorico()">
+                  <svg class="icone-salvar-historico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round">
+                    <path d="M5 4h11l3 3v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z"></path>
+                    <path d="M8 4v5h7V4"></path>
+                    <rect x="7.5" y="13" width="9" height="6"></rect>
+                  </svg>
+                  Salvar no histórico
+                </button>
+                <span class="info-ultimo-historico" id="infoUltimoHistorico"></span>
+              </div>
             </div>
           </div>
           <div class="lista-itens" id="listaItens">
@@ -551,6 +554,7 @@
       atualizarNavAtiva('navMeusChecklists');
       renderizarItens();
       configurarLinhaAgenda();
+      atualizarInfoUltimoHistorico();
     }
 
     function atualizarNavAtiva(idAtivo) {
@@ -647,6 +651,26 @@
       });
     }
 
+    // Guarda (no navegador, por checklist) a data/hora do último "Salvar no
+    // histórico", só pra mostrar esse informativo sem precisar de uma nova
+    // chamada ao backend toda vez que o checklist é aberto.
+    function chaveUltimoHistorico(idChecklist) {
+      return 'checklist_ultimoHistorico_' + idChecklist;
+    }
+
+    function formatarDataExibicao(data) {
+      const partes = (data || '').split('-');
+      return partes.length === 3 ? partes[2] + '/' + partes[1] : '';
+    }
+
+    function atualizarInfoUltimoHistorico() {
+      const info = document.getElementById('infoUltimoHistorico');
+      let salvo = null;
+      try { salvo = JSON.parse(localStorage.getItem(chaveUltimoHistorico(checklistAtual.id)) || 'null'); } catch (e) { salvo = null; }
+
+      info.textContent = salvo ? ('Último salvo: ' + formatarDataExibicao(salvo.data) + ' às ' + salvo.hora) : '';
+    }
+
     // Ação manual e deliberada: registra no Histórico a data/hora de agora e
     // quantos itens estão marcados neste momento, SEM mexer nos itens. Existe
     // justamente pra quando o checklist nunca fica 100% (ex.: Viagem), mas a
@@ -664,6 +688,11 @@
         }
         botao.textContent = '✓ Salvo às ' + resultado.hora;
         setTimeout(function () { botao.innerHTML = textoOriginal; }, 2500);
+
+        try {
+          localStorage.setItem(chaveUltimoHistorico(checklistAtual.id), JSON.stringify({ data: resultado.data, hora: resultado.hora }));
+        } catch (e) { /* localStorage indisponível: só não mostra o informativo */ }
+        atualizarInfoUltimoHistorico();
       }).catch(function () {
         botao.disabled = false;
         alert('Falha de conexão ao salvar no histórico.');
