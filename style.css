@@ -660,6 +660,18 @@ body.tela-login {
   color: var(--texto-suave-card);
   margin-right: auto;
 }
+.status-salvando-agenda {
+  font-family: var(--fonte-base);
+  font-size: 11px;
+  font-weight: 600;
+  font-style: italic;
+  color: var(--texto-suave-card);
+  opacity: 0.75;
+  display: none;
+}
+.status-salvando-agenda.visivel {
+  display: inline-block;
+}
 .icone-agenda-link {
   width: 34px;
   height: 34px;

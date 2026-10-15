@@ -149,6 +149,7 @@
           <div class="bloco-agenda">
             <div class="linha-agenda">
               <span class="rotulo-agenda" title="Usa a mesma conta Google do seu login">Avisar na minha agenda Google</span>
+              <span class="status-salvando-agenda" id="statusSalvandoAgenda">Salvando...</span>
               <a class="icone-agenda-link" href="https://calendar.google.com/" target="_blank" rel="noopener" title="Abrir minha Google Agenda">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="2"></rect><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"></line><line x1="8" y1="3" x2="8" y2="6.5"></line><line x1="16" y1="3" x2="16" y2="6.5"></line></svg>
               </a>
@@ -264,6 +265,12 @@
     let listaEditando = false;
     let criandoSecao = false;
     const secoesRecolhidas = new Set();
+    // Guarda o token de autorização da agenda Google por alguns minutos pra
+    // não pedir autorização de novo a cada campo que a usuária muda (data,
+    // horário, repetir, dia da semana...) — é isso que deixa a tela lenta
+    // ao alternar os campos, já que cada pedido de token é uma ida e volta
+    // até o Google antes mesmo de chamar o backend.
+    let tokenAgendaCache = { token: null, expiraEm: 0 };
     const dataHoje = new Date().toISOString().substring(0, 10);
 
     const SVG_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><line x1="12" y1="2.5" x2="12" y2="4.8"></line><line x1="12" y1="19.2" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="4.8" y2="12"></line><line x1="19.2" y1="12" x2="21.5" y2="12"></line><line x1="5.4" y1="5.4" x2="7" y2="7"></line><line x1="17" y1="17" x2="18.6" y2="18.6"></line><line x1="5.4" y1="18.6" x2="7" y2="17"></line><line x1="17" y1="7" x2="18.6" y2="5.4"></line></svg>';
@@ -378,6 +385,13 @@
     // token sem mostrar tela nenhuma. aoReceber(token) só é chamado em
     // caso de sucesso; em caso de falha/recusa, mostra um alerta.
     function obterTokenAgenda(aoReceber) {
+      // Reaproveita o token já autorizado nesta sessão, se ainda for válido,
+      // em vez de pedir autorização de novo a cada mudancinha no formulário.
+      if (tokenAgendaCache.token && Date.now() < tokenAgendaCache.expiraEm) {
+        aoReceber(tokenAgendaCache.token);
+        return;
+      }
+
       if (!window.google || !google.accounts || !google.accounts.oauth2) {
         alert('Ainda carregando a autorização do Google. Tente de novo em alguns segundos.');
         return;
@@ -393,6 +407,10 @@
             alert('Não foi possível conectar com sua agenda do Google. Tente novamente e use a mesma conta do seu login (' + email + ').');
             return;
           }
+          // Guarda com uma margem de 1 minuto antes do vencimento real.
+          var validoPorMs = ((resposta.expires_in || 3500) * 1000) - 60000;
+          tokenAgendaCache.token = resposta.access_token;
+          tokenAgendaCache.expiraEm = Date.now() + Math.max(validoPorMs, 60000);
           aoReceber(resposta.access_token);
         }
       });
@@ -763,6 +781,12 @@
         return;
       }
 
+      // A tela já reflete a mudança na hora (o campo mudou, o interruptor
+      // já ligou/desligou); isso aqui só avisa que o salvamento na agenda
+      // do Google está rodando por trás, sem travar nada enquanto espera.
+      const statusSalvando = document.getElementById('statusSalvandoAgenda');
+      statusSalvando.classList.add('visivel');
+
       chamarBackend('definirNotificacaoAgenda', {
         idPlanilha: idPlanilha,
         idChecklist: checklistAtual.id,
@@ -792,6 +816,8 @@
       }).catch(function () {
         const mensagem = 'Falha de conexão ao salvar na agenda.';
         if (aoFalhar) aoFalhar(mensagem); else alert(mensagem);
+      }).finally(function () {
+        statusSalvando.classList.remove('visivel');
       });
     }
 
