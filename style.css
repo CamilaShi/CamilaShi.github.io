@@ -554,17 +554,104 @@ body.tela-login {
   cursor: pointer;
 }
 
+.bloco-agenda {
+  margin-bottom: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--borda-dourada);
+  padding: 4px 14px 12px;
+}
 .linha-agenda {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 4px 14px;
-  margin-bottom: 14px;
+  padding: 4px 0;
+  flex-wrap: wrap;
+}
+.linha-agenda-detalhes {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 10px;
+  border-top: 1px solid var(--borda-dourada);
+  margin-top: 4px;
+}
+.campo-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.campo-agenda label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--texto-suave-card);
+}
+.campo-data {
+  padding: 6px 10px;
   border-radius: 14px;
   border: 1px solid var(--borda-dourada);
-  background: transparent;
+  background: var(--vidro-icone);
+  color: var(--pergaminho);
+  font-family: var(--fonte-base);
+  font-size: 13px;
+  font-weight: 600;
+}
+.campo-repetir {
+  flex: 1;
+  min-width: 140px;
+}
+.linha-agenda-recorrencia {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   flex-wrap: wrap;
+  padding-top: 10px;
+}
+.dias-semana-chips {
+  display: flex;
+  gap: 4px;
+}
+.chip-dia {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--borda-dourada);
+  background: transparent;
+  color: var(--texto-suave-card);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chip-dia.ativo {
+  background: var(--nav-ativo-bg);
+  color: var(--pergaminho);
+  border-color: transparent;
+}
+.campo-intervalo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-suave-card);
+}
+.campo-intervalo input {
+  width: 42px;
+  padding: 5px 6px;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid var(--borda-dourada);
+  background: var(--vidro-icone);
+  color: var(--pergaminho);
+  font-family: var(--fonte-base);
+  font-size: 13px;
+  font-weight: 600;
 }
 .rotulo-agenda {
   font-family: var(--fonte-base);

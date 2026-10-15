@@ -146,13 +146,49 @@
             <div class="progresso-trilha"><span id="progressoBarra" style="width:0%"></span></div>
           </div>
 
-          <div class="linha-agenda">
-            <span class="rotulo-agenda" title="Usa a mesma conta Google do seu login">Avisar na minha agenda Google</span>
-            <label class="interruptor">
-              <input type="checkbox" id="toggleAgenda" onchange="alternarNotificacaoAgenda()">
-              <span class="interruptor-trilho"><span class="interruptor-bola"></span></span>
-            </label>
-            <select id="horaAgenda" class="select-hora" disabled onchange="salvarHorarioAgenda()"></select>
+          <div class="bloco-agenda">
+            <div class="linha-agenda">
+              <span class="rotulo-agenda" title="Usa a mesma conta Google do seu login">Avisar na minha agenda Google</span>
+              <label class="interruptor">
+                <input type="checkbox" id="toggleAgenda" onchange="alternarNotificacaoAgenda()">
+                <span class="interruptor-trilho"><span class="interruptor-bola"></span></span>
+              </label>
+            </div>
+            <div class="linha-agenda-detalhes" id="detalhesAgenda" style="display:none;">
+              <div class="campo-agenda">
+                <label>Início</label>
+                <input type="date" id="dataAgenda" class="campo-data" onchange="salvarDetalhesAgenda()">
+              </div>
+              <div class="campo-agenda">
+                <label>Horário</label>
+                <select id="horaAgenda" class="select-hora" onchange="salvarDetalhesAgenda()"></select>
+              </div>
+              <div class="campo-agenda campo-repetir">
+                <label>Repetir</label>
+                <select id="repetirAgenda" class="select-hora" onchange="aoMudarRepetirAgenda()">
+                  <option value="Nenhuma">Não repetir</option>
+                  <option value="Diaria">Diariamente</option>
+                  <option value="Semanal">Semanalmente</option>
+                  <option value="Mensal">Mensalmente</option>
+                </select>
+              </div>
+            </div>
+            <div class="linha-agenda-recorrencia" id="recorrenciaAgenda" style="display:none;">
+              <div class="dias-semana-chips" id="diasSemanaAgenda">
+                <button type="button" class="chip-dia" data-dia="SU" onclick="alternarDiaSemanaAgenda(this)">D</button>
+                <button type="button" class="chip-dia" data-dia="MO" onclick="alternarDiaSemanaAgenda(this)">S</button>
+                <button type="button" class="chip-dia" data-dia="TU" onclick="alternarDiaSemanaAgenda(this)">T</button>
+                <button type="button" class="chip-dia" data-dia="WE" onclick="alternarDiaSemanaAgenda(this)">Q</button>
+                <button type="button" class="chip-dia" data-dia="TH" onclick="alternarDiaSemanaAgenda(this)">Q</button>
+                <button type="button" class="chip-dia" data-dia="FR" onclick="alternarDiaSemanaAgenda(this)">S</button>
+                <button type="button" class="chip-dia" data-dia="SA" onclick="alternarDiaSemanaAgenda(this)">S</button>
+              </div>
+              <div class="campo-intervalo">
+                <span>a cada</span>
+                <input type="number" min="1" id="intervaloAgenda" value="1" onchange="salvarDetalhesAgenda()">
+                <span id="rotuloIntervaloAgenda">semana(s)</span>
+              </div>
+            </div>
           </div>
           <div class="acoes-itens" id="acoesNormais">
             <div class="acoes-itens-esquerda">
@@ -613,6 +649,9 @@
       });
     }
 
+    // Códigos BYDAY do RRULE (Google Calendar), na ordem dos chips D S T Q Q S S.
+    const DIAS_SEMANA_AGENDA = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
     function preencherSeletorHorarioAgenda() {
       const select = document.getElementById('horaAgenda');
       select.innerHTML = '';
@@ -627,83 +666,168 @@
       }
     }
 
+    function dataHojeLocalAgenda() {
+      const agora = new Date();
+      return agora.getFullYear() + '-' + String(agora.getMonth() + 1).padStart(2, '0') + '-' + String(agora.getDate()).padStart(2, '0');
+    }
+
+    function rotuloIntervaloAgenda(tipo) {
+      if (tipo === 'Mensal') return 'mês(es)';
+      if (tipo === 'Semanal') return 'semana(s)';
+      return 'dia(s)';
+    }
+
+    // Mostra/esconde os detalhes (data/horário/repetir) e a linha de
+    // recorrência (dias da semana / intervalo) de acordo com o estado atual
+    // do interruptor e da opção escolhida em "Repetir".
+    function atualizarVisibilidadeRecorrenciaAgenda() {
+      const ativo = document.getElementById('toggleAgenda').checked;
+      const tipo = document.getElementById('repetirAgenda').value;
+      const mostrarRecorrencia = ativo && tipo !== 'Nenhuma';
+
+      document.getElementById('detalhesAgenda').style.display = ativo ? 'flex' : 'none';
+      document.getElementById('recorrenciaAgenda').style.display = mostrarRecorrencia ? 'flex' : 'none';
+      document.getElementById('diasSemanaAgenda').style.display = tipo === 'Semanal' ? 'flex' : 'none';
+      document.getElementById('rotuloIntervaloAgenda').textContent = rotuloIntervaloAgenda(tipo);
+    }
+
+    // Preenche o bloco inteiro com o que está salvo no checklist (ou com
+    // valores padrão, se ainda nunca foi configurado).
     function configurarLinhaAgenda() {
       const toggle = document.getElementById('toggleAgenda');
-      const select = document.getElementById('horaAgenda');
+      const horaSelect = document.getElementById('horaAgenda');
+      const dataInput = document.getElementById('dataAgenda');
+      const repetirSelect = document.getElementById('repetirAgenda');
+      const intervaloInput = document.getElementById('intervaloAgenda');
 
-      if (!select.options.length) preencherSeletorHorarioAgenda();
+      if (!horaSelect.options.length) preencherSeletorHorarioAgenda();
 
       toggle.checked = !!checklistAtual.notificarAgenda;
-      select.disabled = !toggle.checked;
-      select.value = checklistAtual.horarioAgenda || '08:00';
+      horaSelect.value = checklistAtual.horarioAgenda || '08:00';
+      dataInput.value = checklistAtual.dataInicioAgenda || dataHojeLocalAgenda();
+      repetirSelect.value = checklistAtual.tipoRecorrencia || 'Diaria';
+      intervaloInput.value = checklistAtual.intervaloRecorrencia || 1;
+
+      const diasAtivos = (checklistAtual.diasSemana || '').split(',').filter(Boolean);
+      document.querySelectorAll('#diasSemanaAgenda .chip-dia').forEach(function (chip) {
+        chip.classList.toggle('ativo', diasAtivos.indexOf(chip.dataset.dia) !== -1);
+      });
+      if (repetirSelect.value === 'Semanal' && !diasAtivos.length) {
+        // Semanal sem nenhum dia marcado não faz sentido: usa o dia de hoje.
+        const codigoHoje = DIAS_SEMANA_AGENDA[new Date().getDay()];
+        const chipHoje = document.querySelector('#diasSemanaAgenda .chip-dia[data-dia="' + codigoHoje + '"]');
+        if (chipHoje) chipHoje.classList.add('ativo');
+      }
+
+      atualizarVisibilidadeRecorrenciaAgenda();
+    }
+
+    function aoMudarRepetirAgenda() {
+      atualizarVisibilidadeRecorrenciaAgenda();
+      salvarDetalhesAgenda();
+    }
+
+    function alternarDiaSemanaAgenda(botao) {
+      botao.classList.toggle('ativo');
+      salvarDetalhesAgenda();
+    }
+
+    function coletarDiasSemanaAgenda() {
+      return Array.prototype.slice.call(document.querySelectorAll('#diasSemanaAgenda .chip-dia.ativo'))
+        .map(function (chip) { return chip.dataset.dia; });
+    }
+
+    function coletarDadosAgenda() {
+      return {
+        horario: document.getElementById('horaAgenda').value,
+        dataInicio: document.getElementById('dataAgenda').value,
+        tipoRecorrencia: document.getElementById('repetirAgenda').value,
+        intervalo: Number(document.getElementById('intervaloAgenda').value) || 1,
+        diasSemana: coletarDiasSemanaAgenda()
+      };
+    }
+
+    // Manda pro backend o estado atual do formulário (ligado/desligado +
+    // data/horário/recorrência). "aoFalhar" é usado só por quem precisa
+    // desfazer alguma alteração visual (o próprio interruptor); os demais
+    // campos chamam direto e mostram um alert em caso de erro.
+    function enviarAgenda(notificar, token, aoFalhar) {
+      const dados = coletarDadosAgenda();
+
+      if (notificar && dados.tipoRecorrencia === 'Semanal' && !dados.diasSemana.length) {
+        const mensagem = 'Selecione ao menos um dia da semana para a recorrência semanal.';
+        if (aoFalhar) aoFalhar(mensagem); else alert(mensagem);
+        return;
+      }
+
+      chamarBackend('definirNotificacaoAgenda', {
+        idPlanilha: idPlanilha,
+        idChecklist: checklistAtual.id,
+        notificar: notificar,
+        horario: dados.horario,
+        dataInicio: dados.dataInicio,
+        tipoRecorrencia: dados.tipoRecorrencia,
+        intervalo: dados.intervalo,
+        diasSemana: dados.diasSemana,
+        tokenAgenda: token
+      }).then(function (resultado) {
+        if (!resultado.ok) {
+          const mensagem = resultado.erro || 'Não foi possível salvar na agenda.';
+          if (aoFalhar) aoFalhar(mensagem); else alert(mensagem);
+          return;
+        }
+        checklistAtual.notificarAgenda = notificar;
+        if (notificar) {
+          checklistAtual.horarioAgenda = dados.horario;
+          checklistAtual.dataInicioAgenda = dados.dataInicio;
+          checklistAtual.tipoRecorrencia = dados.tipoRecorrencia;
+          checklistAtual.intervaloRecorrencia = dados.intervalo;
+          checklistAtual.diasSemana = dados.diasSemana.join(',');
+        } else {
+          checklistAtual.horarioAgenda = '';
+        }
+      }).catch(function () {
+        const mensagem = 'Falha de conexão ao salvar na agenda.';
+        if (aoFalhar) aoFalhar(mensagem); else alert(mensagem);
+      });
     }
 
     function alternarNotificacaoAgenda() {
       const toggle = document.getElementById('toggleAgenda');
-      const select = document.getElementById('horaAgenda');
-      const horarioAnterior = checklistAtual.horarioAgenda;
-      const notificarAnterior = checklistAtual.notificarAgenda;
+      const estadoAnterior = {
+        notificarAgenda: checklistAtual.notificarAgenda,
+        horarioAgenda: checklistAtual.horarioAgenda,
+        dataInicioAgenda: checklistAtual.dataInicioAgenda,
+        tipoRecorrencia: checklistAtual.tipoRecorrencia,
+        intervaloRecorrencia: checklistAtual.intervaloRecorrencia,
+        diasSemana: checklistAtual.diasSemana
+      };
 
-      select.disabled = !toggle.checked;
       checklistAtual.notificarAgenda = toggle.checked;
-      if (!select.value) select.value = '08:00';
+      if (toggle.checked) {
+        if (!checklistAtual.dataInicioAgenda) document.getElementById('dataAgenda').value = dataHojeLocalAgenda();
+        if (!checklistAtual.tipoRecorrencia) document.getElementById('repetirAgenda').value = 'Diaria';
+      }
+      atualizarVisibilidadeRecorrenciaAgenda();
 
       function desfazer(mensagem) {
-        toggle.checked = notificarAnterior;
-        select.disabled = !notificarAnterior;
-        checklistAtual.notificarAgenda = notificarAnterior;
-        checklistAtual.horarioAgenda = horarioAnterior;
+        Object.assign(checklistAtual, estadoAnterior);
+        toggle.checked = !!estadoAnterior.notificarAgenda;
+        configurarLinhaAgenda();
         if (mensagem) alert(mensagem);
       }
 
-      function enviar(token) {
-        chamarBackend('definirNotificacaoAgenda', {
-          idPlanilha: idPlanilha,
-          idChecklist: checklistAtual.id,
-          notificar: toggle.checked,
-          horario: select.value,
-          tokenAgenda: token
-        }).then(function (resultado) {
-          if (!resultado.ok) { desfazer(resultado.erro || 'Não foi possível salvar.'); return; }
-          checklistAtual.horarioAgenda = select.value;
-        }).catch(function () { desfazer('Falha de conexão ao salvar o aviso na agenda.'); });
-      }
-
-      if (toggle.checked) {
-        // Ativando: precisa autorizar (ou reaproveitar a autorização) da
-        // agenda Google antes de mandar pro backend.
-        obterTokenAgenda(enviar);
-      } else {
-        // Desligando: ainda pede o token pra poder apagar o evento já
-        // criado antes; se recusar, desliga só localmente de qualquer jeito.
-        obterTokenAgenda(enviar);
-      }
+      // Ligando ou desligando, sempre pede o token: pra ligar, precisa
+      // autorizar (ou reaproveitar a autorização) da agenda Google; pra
+      // desligar, usa o token pra apagar o evento já criado antes.
+      obterTokenAgenda(function (token) { enviarAgenda(toggle.checked, token, desfazer); });
     }
 
-    function salvarHorarioAgenda() {
-      const select = document.getElementById('horaAgenda');
-      const horarioAnterior = checklistAtual.horarioAgenda;
-      checklistAtual.horarioAgenda = select.value;
-
-      obterTokenAgenda(function (token) {
-        chamarBackend('definirNotificacaoAgenda', {
-          idPlanilha: idPlanilha,
-          idChecklist: checklistAtual.id,
-          notificar: true,
-          horario: select.value,
-          tokenAgenda: token
-        }).then(function (resultado) {
-          if (!resultado.ok) {
-            select.value = horarioAnterior;
-            checklistAtual.horarioAgenda = horarioAnterior;
-            alert(resultado.erro || 'Não foi possível salvar.');
-          }
-        }).catch(function () {
-          select.value = horarioAnterior;
-          checklistAtual.horarioAgenda = horarioAnterior;
-          alert('Falha de conexão ao salvar o horário.');
-        });
-      });
+    // Disparado por qualquer mudança nos campos de data/horário/repetir/
+    // intervalo/dia-da-semana enquanto o aviso já está ligado.
+    function salvarDetalhesAgenda() {
+      if (!document.getElementById('toggleAgenda').checked) return;
+      obterTokenAgenda(function (token) { enviarAgenda(true, token); });
     }
 
     function voltarParaLista() {
