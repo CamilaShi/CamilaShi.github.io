@@ -444,7 +444,11 @@
     // Mesma lógica da função acima, só que pedindo acesso ao Drive da
     // própria usuária — e só aos arquivos que o próprio app criar
     // (escopo "drive.file"), nunca ao resto do Drive dela.
-    function obterTokenFotos(aoReceber) {
+    // "aoErro" é opcional, mas importante: sem ele, uma recusa ou falha do
+    // Google deixava quem chamou essa função esperando pra sempre (foi o
+    // que travou o "Enviando..." nas fotos) — agora sempre avisamos um
+    // jeito ou outro, sucesso ou erro.
+    function obterTokenFotos(aoReceber, aoErro) {
       if (tokenFotosCache.token && Date.now() < tokenFotosCache.expiraEm) {
         aoReceber(tokenFotosCache.token);
         return;
@@ -452,6 +456,7 @@
 
       if (!window.google || !google.accounts || !google.accounts.oauth2) {
         alert('Ainda carregando a autorização do Google. Tente de novo em alguns segundos.');
+        if (aoErro) aoErro('Autorização do Google ainda não carregou.');
         return;
       }
 
@@ -463,6 +468,7 @@
         callback: function (resposta) {
           if (resposta.error) {
             alert('Não foi possível conectar com seu Google Drive agora. Tente de novo e use a mesma conta do seu login (' + email + ').');
+            if (aoErro) aoErro(resposta.error);
             return;
           }
           var validoPorMs = ((resposta.expires_in || 3500) * 1000) - 60000;
@@ -472,6 +478,18 @@
         }
       });
       cliente.requestAccessToken();
+    }
+
+    // Garante que uma promessa nunca fique pendurada pra sempre — se não
+    // responder dentro do prazo, desiste com uma mensagem clara em vez de
+    // deixar a tela presa em "Enviando..." sem fim.
+    function comLimiteDeTempo(promessa, ms, mensagemErro) {
+      return Promise.race([
+        promessa,
+        new Promise(function (_, rejeitar) {
+          setTimeout(function () { rejeitar(new Error(mensagemErro)); }, ms);
+        })
+      ]);
     }
 
     // Reduz o tamanho da foto antes de subir pro Drive (evita lotar o
@@ -587,7 +605,13 @@
 
       grade.innerHTML = '<div class="estado-vazio estado-vazio-fotos">Carregando fotos...</div>';
 
-      obterTokenFotos(function (token) {
+      const promessaToken = new Promise(function (resolver, rejeitar) {
+        obterTokenFotos(resolver, function (erroToken) {
+          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
+        });
+      });
+
+      comLimiteDeTempo(promessaToken, 45000, 'Demorou demais pra autorizar o Google Drive.').then(function (token) {
         grade.innerHTML = '';
         for (const foto of fotos) {
           const miniatura = document.createElement('div');
@@ -607,6 +631,8 @@
             miniatura.innerHTML = '<div class="miniatura-erro">Não carregou</div>';
           });
         }
+      }).catch(function () {
+        grade.innerHTML = '<div class="estado-vazio estado-vazio-fotos">Não foi possível acessar o Google Drive agora. Toque em "Fotos" de novo pra tentar.</div>';
       });
     }
 
@@ -621,7 +647,7 @@
 
       try {
         const blob = await comprimirFoto(arquivo);
-        await new Promise(function (resolver, rejeitar) {
+        const promessaEnvio = new Promise(function (resolver, rejeitar) {
           obterTokenFotos(async function (token) {
             try {
               const idArquivo = await subirFotoDrive(blob, arquivo.name || 'foto.jpg', token);
@@ -631,8 +657,13 @@
             } catch (erro) {
               rejeitar(erro);
             }
+          }, function (erroToken) {
+            // O Google recusou ou falhou em dar a permissão — desiste aqui
+            // em vez de deixar o "Enviando..." preso pra sempre.
+            rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
           });
         });
+        await comLimiteDeTempo(promessaEnvio, 45000, 'O envio demorou demais e foi cancelado.');
         renderizarGaleriaFotos();
         renderizarItens();
       } catch (erro) {
@@ -646,16 +677,25 @@
       if (!itemGaleriaAtual) return;
       if (!confirm('Apagar essa foto?')) return;
 
-      obterTokenFotos(async function (token) {
-        try {
-          await apagarFotoDrive(idArquivo, token);
-        } catch (erro) {
-          // Segue removendo da lista mesmo que já tenha sido apagada no Drive.
-        }
-        itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).filter(function (f) { return f.id !== idArquivo; });
-        await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
-        renderizarGaleriaFotos();
-        renderizarItens();
+      const promessaExclusao = new Promise(function (resolver, rejeitar) {
+        obterTokenFotos(async function (token) {
+          try {
+            await apagarFotoDrive(idArquivo, token);
+          } catch (erro) {
+            // Segue removendo da lista mesmo que já tenha sido apagada no Drive.
+          }
+          itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).filter(function (f) { return f.id !== idArquivo; });
+          await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
+          renderizarGaleriaFotos();
+          renderizarItens();
+          resolver();
+        }, function (erroToken) {
+          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
+        });
+      });
+
+      comLimiteDeTempo(promessaExclusao, 45000, 'Demorou demais e foi cancelado.').catch(function () {
+        alert('Não foi possível apagar a foto agora. Tente de novo.');
       });
     }
 
