@@ -1272,13 +1272,14 @@
 
     function criarLinhaItem(item, editavel) {
       const linha = document.createElement('div');
-      ativarArrasto(linha, item);
       linha.className = 'item-check' + (item.marcado ? ' marcado' : '');
+      linha.dataset.itemId = item.id;
       linha.onclick = () => alternarItem(item.id);
 
       const alca = document.createElement('span');
       alca.className = 'alca-arrastar';
       alca.innerHTML = '&#10287;';
+      ativarArrasto(linha, alca, item);
 
       const caixa = document.createElement('div');
       caixa.className = 'caixa-check';
@@ -1341,6 +1342,7 @@
     function criarBlocoSecao(secao, itensDaSecao) {
       const bloco = document.createElement('div');
       bloco.className = 'bloco-secao';
+      bloco.dataset.secaoId = secao.id;
 
       const total = itensDaSecao.length;
       const feitos = itensDaSecao.filter(i => i.marcado).length;
@@ -1402,7 +1404,7 @@
       cabecalho.appendChild(contagem);
       bloco.appendChild(cabecalho);
 
-      ativarArrastoSecao(bloco, cabecalho, secao);
+      ativarArrastoSecao(bloco, alcaSecao, secao);
 
       const linhaProgresso = document.createElement('div');
       linhaProgresso.className = 'secao-progresso-linha';
@@ -1833,36 +1835,73 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
     // Arrastar e soltar para reordenar os itens. A alça e a própria linha
     // iniciam o arrasto; o alvo é definido pela linha sobre a qual o mouse
     // está quando o item é soltado.
-    function ativarArrasto(linha, item) {
-      linha.draggable = true;
+    // Pointer Events funcionam em mouse E em toque com o mesmo código — por
+    // isso trocamos a API nativa de Drag and Drop (que o celular não segue
+    // direito) por essa aqui, pra arrastar tanto itens quanto seções
+    // segurando pela alcinha.
+    function prepararArrastavel(config) {
+      let arrastando = false;
+      let pointerId = null;
 
-      linha.ondragstart = (ev) => {
-        idArrastado = item.id;
-        ev.dataTransfer.effectAllowed = 'move';
-        linha.classList.add('arrastando');
-      };
+      function limparDestaque() {
+        document.querySelectorAll(config.seletorLinha + '.' + config.classeSobre).forEach(function (el) {
+          el.classList.remove(config.classeSobre);
+        });
+      }
 
-      linha.ondragend = () => {
-        linha.classList.remove('arrastando');
-        idArrastado = null;
-      };
+      function elementoSobPonteiro(ev) {
+        const alvo = document.elementFromPoint(ev.clientX, ev.clientY);
+        return alvo && alvo.closest(config.seletorLinha);
+      }
 
-      linha.ondragover = (ev) => {
+      config.alca.addEventListener('pointerdown', function (ev) {
+        if (ev.button !== undefined && ev.button !== 0) return;
+        arrastando = true;
+        pointerId = ev.pointerId;
+        config.definirIdArrastado(config.obterIdAtual());
+        config.elemento.classList.add(config.classeArrastando);
+        try { config.alca.setPointerCapture(pointerId); } catch (e) { /* ignora se o navegador não suportar */ }
         ev.preventDefault();
-        if (idArrastado !== null && idArrastado !== item.id) {
-          linha.classList.add('arrasto-sobre');
+      });
+
+      config.alca.addEventListener('pointermove', function (ev) {
+        if (!arrastando) return;
+        limparDestaque();
+        const alvo = elementoSobPonteiro(ev);
+        if (alvo && alvo !== config.elemento) alvo.classList.add(config.classeSobre);
+      });
+
+      function finalizar(ev) {
+        if (!arrastando) return;
+        arrastando = false;
+        config.elemento.classList.remove(config.classeArrastando);
+        limparDestaque();
+        const alvo = elementoSobPonteiro(ev);
+        if (alvo && alvo !== config.elemento) {
+          config.aoSoltar(config.obterIdArrastado(), alvo);
         }
-      };
+        config.definirIdArrastado(null);
+        pointerId = null;
+      }
 
-      linha.ondragleave = () => {
-        linha.classList.remove('arrasto-sobre');
-      };
+      config.alca.addEventListener('pointerup', finalizar);
+      config.alca.addEventListener('pointercancel', finalizar);
+    }
 
-      linha.ondrop = (ev) => {
-        ev.preventDefault();
-        linha.classList.remove('arrasto-sobre');
-        moverItem(idArrastado, item.id);
-      };
+    function ativarArrasto(linha, alca, item) {
+      prepararArrastavel({
+        alca: alca,
+        elemento: linha,
+        seletorLinha: '.item-check',
+        obterIdAtual: function () { return item.id; },
+        definirIdArrastado: function (id) { idArrastado = id; },
+        obterIdArrastado: function () { return idArrastado; },
+        classeArrastando: 'arrastando',
+        classeSobre: 'arrasto-sobre',
+        aoSoltar: function (idOrigem, elementoAlvo) {
+          moverItem(idOrigem, elementoAlvo.dataset.itemId);
+        }
+      });
     }
 
     function moverItem(idOrigem, idDestino) {
@@ -1890,36 +1929,20 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
     // Arrastar a lista (seção) inteira pela alça do cabeçalho, para cima
     // ou para baixo de outra lista — move a seção com todos os itens
     // dela junto, já que os itens ficam ligados pelo idSecao.
-    function ativarArrastoSecao(bloco, cabecalho, secao) {
-      cabecalho.draggable = true;
-
-      cabecalho.ondragstart = (ev) => {
-        idSecaoArrastada = secao.id;
-        ev.dataTransfer.effectAllowed = 'move';
-        bloco.classList.add('secao-arrastando');
-      };
-
-      cabecalho.ondragend = () => {
-        bloco.classList.remove('secao-arrastando');
-        idSecaoArrastada = null;
-      };
-
-      bloco.ondragover = (ev) => {
-        ev.preventDefault();
-        if (idSecaoArrastada !== null && idSecaoArrastada !== secao.id) {
-          bloco.classList.add('secao-arrasto-sobre');
+    function ativarArrastoSecao(bloco, alca, secao) {
+      prepararArrastavel({
+        alca: alca,
+        elemento: bloco,
+        seletorLinha: '.bloco-secao',
+        obterIdAtual: function () { return secao.id; },
+        definirIdArrastado: function (id) { idSecaoArrastada = id; },
+        obterIdArrastado: function () { return idSecaoArrastada; },
+        classeArrastando: 'secao-arrastando',
+        classeSobre: 'secao-arrasto-sobre',
+        aoSoltar: function (idOrigem, elementoAlvo) {
+          moverSecao(idOrigem, elementoAlvo.dataset.secaoId);
         }
-      };
-
-      bloco.ondragleave = () => {
-        bloco.classList.remove('secao-arrasto-sobre');
-      };
-
-      bloco.ondrop = (ev) => {
-        ev.preventDefault();
-        bloco.classList.remove('secao-arrasto-sobre');
-        moverSecao(idSecaoArrastada, secao.id);
-      };
+      });
     }
 
     function moverSecao(idOrigem, idDestino) {
