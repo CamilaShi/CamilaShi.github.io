@@ -645,29 +645,37 @@
       const textoOriginal = botaoAdd.textContent;
       botaoAdd.textContent = 'Enviando...';
 
-      try {
-        const blob = await comprimirFoto(arquivo);
-        const promessaEnvio = new Promise(function (resolver, rejeitar) {
-          obterTokenFotos(async function (token) {
-            try {
-              const idArquivo = await subirFotoDrive(blob, arquivo.name || 'foto.jpg', token);
-              itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).concat([{ id: idArquivo, nome: arquivo.name || 'foto.jpg' }]);
-              await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
-              resolver();
-            } catch (erro) {
-              rejeitar(erro);
-            }
-          }, function (erroToken) {
-            // O Google recusou ou falhou em dar a permissão — desiste aqui
-            // em vez de deixar o "Enviando..." preso pra sempre.
-            rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
-          });
+      // Pede a autorização do Google Drive ANTES de qualquer outra tarefa
+      // assíncrona (como comprimir a imagem). O navegador só deixa a janela
+      // de permissão abrir sem bloquear quando ela é disparada direto da
+      // ação do usuário; se a gente espera outra coisa terminar antes
+      // (mesmo que rápido, tipo comprimir a foto), o navegador trata como
+      // pop-up não solicitado e bloqueia silenciosamente — foi o que
+      // aconteceu no bloqueio de pop-up.
+      const promessaEnvio = new Promise(function (resolver, rejeitar) {
+        obterTokenFotos(async function (token) {
+          try {
+            const blob = await comprimirFoto(arquivo);
+            const idArquivo = await subirFotoDrive(blob, arquivo.name || 'foto.jpg', token);
+            itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).concat([{ id: idArquivo, nome: arquivo.name || 'foto.jpg' }]);
+            await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
+            resolver();
+          } catch (erro) {
+            rejeitar(erro);
+          }
+        }, function (erroToken) {
+          // O Google recusou, bloqueou ou falhou em dar a permissão —
+          // desiste aqui em vez de deixar o "Enviando..." preso pra sempre.
+          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
         });
+      });
+
+      try {
         await comLimiteDeTempo(promessaEnvio, 45000, 'O envio demorou demais e foi cancelado.');
         renderizarGaleriaFotos();
         renderizarItens();
       } catch (erro) {
-        alert('Não foi possível adicionar a foto agora. Tente de novo.');
+        alert('Não foi possível adicionar a foto agora. Tente de novo. Se o navegador mostrou um ícone de pop-up bloqueado na barra de endereço, toque nele e escolha "sempre permitir" para este site.');
       } finally {
         botaoAdd.textContent = textoOriginal;
       }
