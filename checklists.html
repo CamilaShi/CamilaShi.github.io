@@ -1435,11 +1435,12 @@
 
         const linhaNovo = document.createElement('div');
         linhaNovo.className = 'linha-novo-item linha-novo-item-secao';
-        const campo = document.createElement('input');
-        campo.type = 'text';
-        campo.placeholder = 'Novo item em ' + secao.nome + '...';
+        const campo = document.createElement('textarea');
+        campo.rows = 1;
+        campo.placeholder = 'Novo item em ' + secao.nome + '... (pode colar uma lista com vários itens)';
         campo.dataset.secaoId = secao.id;
-        campo.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); adicionarItem(secao.id, campo); } };
+        campo.onkeydown = (ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); adicionarItem(secao.id, campo); } };
+        campo.addEventListener('input', () => processarPossivelColagemMultilinha(secao.id, campo));
         const botao = document.createElement('button');
         botao.className = 'botao-mini';
         botao.textContent = '+ Adicionar';
@@ -2118,7 +2119,7 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
     }
 
     function focarCampoNovoItem(idSecao) {
-      const campos = document.querySelectorAll('.linha-novo-item-secao input');
+      const campos = document.querySelectorAll('.linha-novo-item-secao textarea');
       for (const c of campos) {
         if (c.dataset.secaoId === idSecao) {
           c.focus();
@@ -2132,13 +2133,46 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
       const descricao = campo.value.trim();
       if (!descricao) return;
 
-      const idTemporario = 'tmp-' + Date.now();
+      campo.value = '';
+      criarItemLocalEEnviar(descricao, idSecao);
+      renderizarItens();
+      focarCampoNovoItem(idSecao);
+    }
+
+    // Permite colar uma lista com várias linhas (ex: copiada do WhatsApp ou
+    // do bloco de notas) direto no campo de novo item: cada linha não-vazia
+    // vira um item separado, em vez de ser colada como texto corrido.
+    //
+    // O campo é um <textarea>, não um <input>, justamente para isso: um
+    // <input> de uma linha só apaga as quebras de linha antes mesmo do JS
+    // conseguir ler o texto colado (é o que acontecia no celular). O
+    // <textarea> preserva as quebras, então aqui a gente lê o valor já colado
+    // (via evento "input", que dispara tanto no computador quanto no
+    // celular) em vez de depender da API de clipboard, que é instável em
+    // alguns navegadores/apps de celular.
+    function processarPossivelColagemMultilinha(idSecao, campo) {
+      if (campo.value.indexOf('\n') === -1) return;
+
+      const linhas = campo.value
+        .split(/\r?\n/)
+        .map(function (linha) { return linha.trim(); })
+        .filter(function (linha) { return linha.length > 0; });
+
+      campo.value = '';
+      if (!linhas.length) return;
+
+      for (const descricao of linhas) {
+        criarItemLocalEEnviar(descricao, idSecao);
+      }
+      renderizarItens();
+      focarCampoNovoItem(idSecao);
+    }
+
+    function criarItemLocalEEnviar(descricao, idSecao) {
+      const idTemporario = 'tmp-' + Date.now() + '-' + Math.random().toString(36).slice(2);
       const maiorOrdem = itensAtuais.reduce((max, i) => Math.max(max, i.ordem || 0), 0);
       const novoItem = { id: idTemporario, descricao: descricao, ordem: maiorOrdem + 1, marcado: false, idSecao: idSecao || '' };
       itensAtuais.push(novoItem);
-      campo.value = '';
-      renderizarItens();
-      focarCampoNovoItem(idSecao);
 
       chamarBackend('adicionarItem', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id, descricao: descricao, idSecao: idSecao || '' }).then(function (resultado) {
         if (!resultado.ok) {
@@ -2153,7 +2187,7 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
         const i = itensAtuais.indexOf(novoItem);
         if (i !== -1) itensAtuais.splice(i, 1);
         renderizarItens();
-        alert('Falha de conexão ao adicionar o item.');
+        alert('Falha de conexão ao adicionar um dos itens.');
       });
     }
   </script>
