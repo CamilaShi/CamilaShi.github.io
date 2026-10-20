@@ -658,7 +658,8 @@
             const blob = await comprimirFoto(arquivo);
             const idArquivo = await subirFotoDrive(blob, arquivo.name || 'foto.jpg', token);
             itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).concat([{ id: idArquivo, nome: arquivo.name || 'foto.jpg' }]);
-            await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
+            const resultadoSalvar = await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
+            if (!resultadoSalvar.ok) throw new Error(resultadoSalvar.erro || 'Não foi possível salvar a foto na planilha.');
             resolver();
           } catch (erro) {
             rejeitar(erro);
@@ -675,7 +676,11 @@
         renderizarGaleriaFotos();
         renderizarItens();
       } catch (erro) {
-        alert('Não foi possível adicionar a foto agora. Tente de novo. Se o navegador mostrou um ícone de pop-up bloqueado na barra de endereço, toque nele e escolha "sempre permitir" para este site.');
+        const detalhe = (erro && erro.message) ? erro.message : '';
+        alert(
+          'Não foi possível adicionar a foto agora.' + (detalhe ? ' Detalhe técnico: ' + detalhe : '') +
+          ' Tente de novo. Se o navegador mostrou um ícone de pop-up bloqueado na barra de endereço, toque nele e escolha "sempre permitir" para este site.'
+        );
       } finally {
         botaoAdd.textContent = textoOriginal;
       }
