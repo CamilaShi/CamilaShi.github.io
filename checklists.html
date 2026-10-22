@@ -260,7 +260,7 @@
   <div class="janela-overlay" id="janelaFotosItem" style="display:none;">
     <div class="janela-config janela-fotos">
       <h2 id="tituloFotosItem">Fotos do item</h2>
-      <p class="subtitulo">Ficam guardadas no seu Google Drive — só você tem acesso.</p>
+      <p class="subtitulo">Ficam guardadas com segurança — só quem está logada vê essas fotos.</p>
 
       <div class="grade-fotos-item" id="gradeFotosItem"></div>
 
@@ -292,9 +292,6 @@
     // ao alternar os campos, já que cada pedido de token é uma ida e volta
     // até o Google antes mesmo de chamar o backend.
     let tokenAgendaCache = { token: null, expiraEm: 0 };
-    // Mesma ideia, só que pro Google Drive — usado pra subir e mostrar as
-    // fotos anexadas aos itens, sempre no Drive da própria usuária.
-    let tokenFotosCache = { token: null, expiraEm: 0 };
     const dataHoje = new Date().toISOString().substring(0, 10);
 
     const SVG_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"></circle><line x1="12" y1="2.5" x2="12" y2="4.8"></line><line x1="12" y1="19.2" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="4.8" y2="12"></line><line x1="19.2" y1="12" x2="21.5" y2="12"></line><line x1="5.4" y1="5.4" x2="7" y2="7"></line><line x1="17" y1="17" x2="18.6" y2="18.6"></line><line x1="5.4" y1="18.6" x2="7" y2="17"></line><line x1="17" y1="7" x2="18.6" y2="5.4"></line></svg>';
@@ -441,60 +438,19 @@
       cliente.requestAccessToken();
     }
 
-    // Mesma lógica da função acima, só que pedindo acesso ao Drive da
-    // própria usuária — e só aos arquivos que o próprio app criar
-    // (escopo "drive.file"), nunca ao resto do Drive dela.
-    // "aoErro" é opcional, mas importante: sem ele, uma recusa ou falha do
-    // Google deixava quem chamou essa função esperando pra sempre (foi o
-    // que travou o "Enviando..." nas fotos) — agora sempre avisamos um
-    // jeito ou outro, sucesso ou erro.
-    function obterTokenFotos(aoReceber, aoErro) {
-      if (tokenFotosCache.token && Date.now() < tokenFotosCache.expiraEm) {
-        aoReceber(tokenFotosCache.token);
-        return;
-      }
+    // Fotos dos itens: diferente da agenda, isso NÃO passa mais por
+    // autorização do Google no navegador (era isso que travava em
+    // "Enviando..." — o pop-up de permissão do Drive ficava preso, às
+    // vezes sem nem avisar erro). Agora a foto é comprimida aqui, mandada
+    // como base64 pro mesmo backend (Apps Script) que já cuida do resto do
+    // checklist, e é o próprio backend quem guarda no Drive e devolve os
+    // bytes depois — igual já funciona no Checklist Nanya. Continua
+    // restrito a quem está logada: só o backend acessa esses arquivos, e
+    // ele só entrega a foto de um item quando é esse mesmo app pedindo.
 
-      if (!window.google || !google.accounts || !google.accounts.oauth2) {
-        alert('Ainda carregando a autorização do Google. Tente de novo em alguns segundos.');
-        if (aoErro) aoErro('Autorização do Google ainda não carregou.');
-        return;
-      }
-
-      const email = localStorage.getItem('checklist_email');
-      const cliente = google.accounts.oauth2.initTokenClient({
-        client_id: GOOGLE_CLIENT_ID,
-        scope: 'https://www.googleapis.com/auth/drive.file',
-        hint: email || undefined,
-        callback: function (resposta) {
-          if (resposta.error) {
-            alert('Não foi possível conectar com seu Google Drive agora. Tente de novo e use a mesma conta do seu login (' + email + ').');
-            if (aoErro) aoErro(resposta.error);
-            return;
-          }
-          var validoPorMs = ((resposta.expires_in || 3500) * 1000) - 60000;
-          tokenFotosCache.token = resposta.access_token;
-          tokenFotosCache.expiraEm = Date.now() + Math.max(validoPorMs, 60000);
-          aoReceber(resposta.access_token);
-        }
-      });
-      cliente.requestAccessToken();
-    }
-
-    // Garante que uma promessa nunca fique pendurada pra sempre — se não
-    // responder dentro do prazo, desiste com uma mensagem clara em vez de
-    // deixar a tela presa em "Enviando..." sem fim.
-    function comLimiteDeTempo(promessa, ms, mensagemErro) {
-      return Promise.race([
-        promessa,
-        new Promise(function (_, rejeitar) {
-          setTimeout(function () { rejeitar(new Error(mensagemErro)); }, ms);
-        })
-      ]);
-    }
-
-    // Reduz o tamanho da foto antes de subir pro Drive (evita lotar o
-    // Drive da usuária e deixa o upload bem mais rápido no celular).
-    // Redimensiona pro lado maior caber em 1600px e salva como JPEG.
+    // Reduz o tamanho da foto antes de mandar pro backend (evita arquivo
+    // gigante de celular e deixa o envio bem mais rápido). Redimensiona pro
+    // lado maior caber em 1600px, salva como JPEG e devolve em base64.
     function comprimirFoto(arquivo) {
       return new Promise(function (resolver, rejeitar) {
         const leitor = new FileReader();
@@ -519,62 +475,12 @@
             tela.width = largura;
             tela.height = altura;
             tela.getContext('2d').drawImage(imagem, 0, 0, largura, altura);
-            tela.toBlob(function (blob) {
-              if (!blob) { rejeitar(new Error('Não foi possível comprimir a foto.')); return; }
-              resolver(blob);
-            }, 'image/jpeg', 0.75);
+            const dataUrl = tela.toDataURL('image/jpeg', 0.75);
+            resolver({ base64: dataUrl.split(',')[1], tipoMime: 'image/jpeg' });
           };
           imagem.src = leitor.result;
         };
         leitor.readAsDataURL(arquivo);
-      });
-    }
-
-    // Sobe a foto (já comprimida) direto pro Drive da própria usuária.
-    // Fica privada (nenhum link público é criado) — só quem tiver o
-    // token dela consegue acessar o conteúdo depois.
-    async function subirFotoDrive(blob, nomeArquivo, token) {
-      const limite = '-------meList' + Date.now();
-      const metadados = JSON.stringify({ name: nomeArquivo, mimeType: 'image/jpeg' });
-      const bufer = await blob.arrayBuffer();
-
-      const partes = [];
-      partes.push('--' + limite + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + metadados + '\r\n');
-      partes.push('--' + limite + '\r\nContent-Type: image/jpeg\r\n\r\n');
-      const corpoTexto = new TextEncoder().encode(partes.join(''));
-      const rodape = new TextEncoder().encode('\r\n--' + limite + '--');
-
-      const corpoFinal = new Blob([corpoTexto, bufer, rodape]);
-
-      const resposta = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-        method: 'POST',
-        headers: {
-          Authorization: 'Bearer ' + token,
-          'Content-Type': 'multipart/related; boundary=' + limite
-        },
-        body: corpoFinal
-      });
-
-      if (!resposta.ok) throw new Error('Falha ao subir a foto pro Drive (' + resposta.status + ')');
-      const dados = await resposta.json();
-      return dados.id;
-    }
-
-    // Busca os bytes da foto (autenticado, já que ela é privada) e devolve
-    // uma URL temporária que dá pra usar direto num <img src="...">.
-    async function buscarFotoDrive(idArquivo, token) {
-      const resposta = await fetch('https://www.googleapis.com/drive/v3/files/' + idArquivo + '?alt=media', {
-        headers: { Authorization: 'Bearer ' + token }
-      });
-      if (!resposta.ok) throw new Error('Não foi possível carregar essa foto.');
-      const blob = await resposta.blob();
-      return URL.createObjectURL(blob);
-    }
-
-    async function apagarFotoDrive(idArquivo, token) {
-      await fetch('https://www.googleapis.com/drive/v3/files/' + idArquivo, {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer ' + token }
       });
     }
 
@@ -603,37 +509,27 @@
         return;
       }
 
-      grade.innerHTML = '<div class="estado-vazio estado-vazio-fotos">Carregando fotos...</div>';
+      grade.innerHTML = '';
+      for (const foto of fotos) {
+        const miniatura = document.createElement('div');
+        miniatura.className = 'miniatura-foto';
+        miniatura.innerHTML = '<div class="miniatura-carregando">...</div>';
+        grade.appendChild(miniatura);
 
-      const promessaToken = new Promise(function (resolver, rejeitar) {
-        obterTokenFotos(resolver, function (erroToken) {
-          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
+        chamarBackend('obterFotoItem', { idArquivo: foto.id }).then(function (resposta) {
+          if (!resposta.ok) throw new Error(resposta.erro || 'Falha ao carregar a foto.');
+          const url = 'data:' + (resposta.tipoMime || 'image/jpeg') + ';base64,' + resposta.dadosBase64;
+          miniatura.innerHTML =
+            '<img src="' + url + '" alt="">' +
+            '<button class="botao-apagar-foto" title="Apagar foto">&times;</button>';
+          miniatura.querySelector('.botao-apagar-foto').onclick = function (ev) {
+            ev.stopPropagation();
+            apagarFotoItem(foto.id);
+          };
+        }).catch(function () {
+          miniatura.innerHTML = '<div class="miniatura-erro">Não carregou</div>';
         });
-      });
-
-      comLimiteDeTempo(promessaToken, 45000, 'Demorou demais pra autorizar o Google Drive.').then(function (token) {
-        grade.innerHTML = '';
-        for (const foto of fotos) {
-          const miniatura = document.createElement('div');
-          miniatura.className = 'miniatura-foto';
-          miniatura.innerHTML = '<div class="miniatura-carregando">...</div>';
-          grade.appendChild(miniatura);
-
-          buscarFotoDrive(foto.id, token).then(function (url) {
-            miniatura.innerHTML =
-              '<img src="' + url + '" alt="">' +
-              '<button class="botao-apagar-foto" title="Apagar foto">&times;</button>';
-            miniatura.querySelector('.botao-apagar-foto').onclick = function (ev) {
-              ev.stopPropagation();
-              apagarFotoItem(foto.id);
-            };
-          }).catch(function () {
-            miniatura.innerHTML = '<div class="miniatura-erro">Não carregou</div>';
-          });
-        }
-      }).catch(function () {
-        grade.innerHTML = '<div class="estado-vazio estado-vazio-fotos">Não foi possível acessar o Google Drive agora. Toque em "Fotos" de novo pra tentar.</div>';
-      });
+      }
     }
 
     async function onAdicionarFotoSelecionada(event) {
@@ -645,42 +541,22 @@
       const textoOriginal = botaoAdd.textContent;
       botaoAdd.textContent = 'Enviando...';
 
-      // Pede a autorização do Google Drive ANTES de qualquer outra tarefa
-      // assíncrona (como comprimir a imagem). O navegador só deixa a janela
-      // de permissão abrir sem bloquear quando ela é disparada direto da
-      // ação do usuário; se a gente espera outra coisa terminar antes
-      // (mesmo que rápido, tipo comprimir a foto), o navegador trata como
-      // pop-up não solicitado e bloqueia silenciosamente — foi o que
-      // aconteceu no bloqueio de pop-up.
-      const promessaEnvio = new Promise(function (resolver, rejeitar) {
-        obterTokenFotos(async function (token) {
-          try {
-            const blob = await comprimirFoto(arquivo);
-            const idArquivo = await subirFotoDrive(blob, arquivo.name || 'foto.jpg', token);
-            itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).concat([{ id: idArquivo, nome: arquivo.name || 'foto.jpg' }]);
-            const resultadoSalvar = await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
-            if (!resultadoSalvar.ok) throw new Error(resultadoSalvar.erro || 'Não foi possível salvar a foto na planilha.');
-            resolver();
-          } catch (erro) {
-            rejeitar(erro);
-          }
-        }, function (erroToken) {
-          // O Google recusou, bloqueou ou falhou em dar a permissão —
-          // desiste aqui em vez de deixar o "Enviando..." preso pra sempre.
-          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
-        });
-      });
-
       try {
-        await comLimiteDeTempo(promessaEnvio, 45000, 'O envio demorou demais e foi cancelado.');
+        const comprimida = await comprimirFoto(arquivo);
+        const resposta = await chamarBackend('adicionarFotoItem', {
+          idPlanilha: idPlanilha,
+          idItem: itemGaleriaAtual.id,
+          dadosBase64: comprimida.base64,
+          tipoMime: comprimida.tipoMime,
+          nomeArquivo: arquivo.name || 'foto.jpg'
+        });
+        if (!resposta.ok) throw new Error(resposta.erro || 'Não foi possível salvar a foto.');
+        itemGaleriaAtual.fotos = resposta.fotos || (itemGaleriaAtual.fotos || []).concat([{ id: resposta.id, nome: arquivo.name || 'foto.jpg' }]);
         renderizarGaleriaFotos();
         renderizarItens();
       } catch (erro) {
         const detalhe = (erro && erro.message) ? erro.message : '';
-        alert(
-          'Não foi possível adicionar a foto agora.' + (detalhe ? ' Detalhe técnico: ' + detalhe : '') +
-          ' Tente de novo. Se o navegador mostrou um ícone de pop-up bloqueado na barra de endereço, toque nele e escolha "sempre permitir" para este site.'
-        );
+        alert('Não foi possível adicionar a foto agora.' + (detalhe ? ' Detalhe técnico: ' + detalhe : '') + ' Tente de novo.');
       } finally {
         botaoAdd.textContent = textoOriginal;
       }
@@ -690,24 +566,15 @@
       if (!itemGaleriaAtual) return;
       if (!confirm('Apagar essa foto?')) return;
 
-      const promessaExclusao = new Promise(function (resolver, rejeitar) {
-        obterTokenFotos(async function (token) {
-          try {
-            await apagarFotoDrive(idArquivo, token);
-          } catch (erro) {
-            // Segue removendo da lista mesmo que já tenha sido apagada no Drive.
-          }
-          itemGaleriaAtual.fotos = (itemGaleriaAtual.fotos || []).filter(function (f) { return f.id !== idArquivo; });
-          await chamarBackend('salvarFotosItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, fotos: itemGaleriaAtual.fotos });
-          renderizarGaleriaFotos();
-          renderizarItens();
-          resolver();
-        }, function (erroToken) {
-          rejeitar(new Error(erroToken || 'Não foi possível autorizar o Google Drive.'));
-        });
-      });
-
-      comLimiteDeTempo(promessaExclusao, 45000, 'Demorou demais e foi cancelado.').catch(function () {
+      chamarBackend('apagarFotoItem', { idPlanilha: idPlanilha, idItem: itemGaleriaAtual.id, idArquivo: idArquivo }).then(function (resposta) {
+        if (!resposta.ok) {
+          alert(resposta.erro || 'Não foi possível apagar a foto agora. Tente de novo.');
+          return;
+        }
+        itemGaleriaAtual.fotos = resposta.fotos || (itemGaleriaAtual.fotos || []).filter(function (f) { return f.id !== idArquivo; });
+        renderizarGaleriaFotos();
+        renderizarItens();
+      }).catch(function () {
         alert('Não foi possível apagar a foto agora. Tente de novo.');
       });
     }
