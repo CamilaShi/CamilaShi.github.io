@@ -281,6 +281,34 @@
     </div>
   </div>
 
+  <div class="janela-overlay" id="janelaCopiarSecao" style="display:none;">
+    <div class="janela-config">
+      <h2 id="tituloCopiarSecao">Copiar lista</h2>
+      <p class="subtitulo" id="subtituloCopiarSecao">Copia os itens desta lista pra outro checklist — a lista original continua aqui do mesmo jeito.</p>
+
+      <div class="linha-destino">
+        <label class="opcao-radio">
+          <input type="radio" name="destinoCopiarSecao" id="radioDestinoExistente" checked onchange="atualizarDestinoCopiarSecao()">
+          Checklist existente
+        </label>
+        <select id="selectChecklistDestino" class="select-hora"></select>
+      </div>
+
+      <div class="linha-destino">
+        <label class="opcao-radio">
+          <input type="radio" name="destinoCopiarSecao" id="radioDestinoNovo" onchange="atualizarDestinoCopiarSecao()">
+          Criar um checklist novo
+        </label>
+        <input type="text" id="campoNomeNovoChecklistDestino" class="campo-nova-secao" placeholder="Nome do novo checklist..." disabled>
+      </div>
+
+      <div class="janela-botoes">
+        <button class="botao-fechar" onclick="fecharCopiarSecao()">Cancelar</button>
+        <button class="botao-salvar" id="botaoConfirmarCopiarSecao" onclick="confirmarCopiarSecao()">Copiar</button>
+      </div>
+    </div>
+  </div>
+
   <script src="config.js"></script>
   <script>
     let idPlanilha = null;
@@ -1259,6 +1287,14 @@
       iconeLimpar.title = 'Limpar tudo nesta seção';
       iconeLimpar.onclick = (ev) => { ev.stopPropagation(); marcarTodosSecao(secao.id, false); };
 
+      const iconeCopiar = document.createElement('button');
+      iconeCopiar.className = 'icone-copiar-secao';
+      iconeCopiar.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M4 16V4a2 2 0 0 1 2-2h10"></path></svg>';
+      iconeCopiar.title = 'Copiar esta lista pra outro checklist';
+      iconeCopiar.onclick = (ev) => { ev.stopPropagation(); abrirCopiarSecao(secao); };
+
       const iconeExcluir = document.createElement('button');
       iconeExcluir.className = 'icone-lixeira icone-secao';
       iconeExcluir.innerHTML = '&#128465;';
@@ -1286,6 +1322,7 @@
       cabecalho.appendChild(iconeSeta);
       cabecalho.appendChild(iconeMarcar);
       cabecalho.appendChild(iconeLimpar);
+      cabecalho.appendChild(iconeCopiar);
       cabecalho.appendChild(iconeExcluir);
       cabecalho.appendChild(contagem);
       bloco.appendChild(cabecalho);
@@ -1707,6 +1744,98 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
         itensAtuais.splice(0, itensAtuais.length, ...itensAntigos);
         renderizarItens();
         alert(erro || 'Não foi possível excluir a seção.');
+      });
+    }
+
+    // Copia os itens de uma seção/lista pra outro checklist (existente ou
+    // novo), sem tirar nada daqui — a seção original continua intacta
+    // neste checklist.
+    let secaoCopiandoAtual = null;
+
+    function abrirCopiarSecao(secao) {
+      secaoCopiandoAtual = secao;
+      document.getElementById('tituloCopiarSecao').textContent = 'Copiar "' + secao.nome + '"';
+
+      const select = document.getElementById('selectChecklistDestino');
+      select.innerHTML = '';
+      for (const cl of painel.checklists) {
+        const opcao = document.createElement('option');
+        opcao.value = cl.id;
+        opcao.textContent = cl.nome + (cl.id === checklistAtual.id ? ' (este checklist)' : '');
+        select.appendChild(opcao);
+      }
+
+      document.getElementById('radioDestinoExistente').checked = true;
+      document.getElementById('radioDestinoNovo').checked = false;
+      document.getElementById('campoNomeNovoChecklistDestino').value = '';
+      atualizarDestinoCopiarSecao();
+
+      document.getElementById('janelaCopiarSecao').style.display = 'flex';
+    }
+
+    function fecharCopiarSecao() {
+      document.getElementById('janelaCopiarSecao').style.display = 'none';
+      secaoCopiandoAtual = null;
+    }
+
+    function atualizarDestinoCopiarSecao() {
+      const existente = document.getElementById('radioDestinoExistente').checked;
+      document.getElementById('selectChecklistDestino').disabled = !existente;
+      document.getElementById('campoNomeNovoChecklistDestino').disabled = existente;
+    }
+
+    function confirmarCopiarSecao() {
+      if (!secaoCopiandoAtual) return;
+
+      const existente = document.getElementById('radioDestinoExistente').checked;
+      const dadosEnvio = { idPlanilha: idPlanilha, idSecaoOrigem: secaoCopiandoAtual.id };
+
+      if (existente) {
+        const idDestino = document.getElementById('selectChecklistDestino').value;
+        if (!idDestino) return;
+        dadosEnvio.idChecklistDestino = idDestino;
+      } else {
+        const nomeNovo = document.getElementById('campoNomeNovoChecklistDestino').value.trim();
+        if (!nomeNovo) {
+          alert('Digite um nome pro novo checklist.');
+          return;
+        }
+        dadosEnvio.nomeNovoChecklist = nomeNovo;
+      }
+
+      const botao = document.getElementById('botaoConfirmarCopiarSecao');
+      botao.disabled = true;
+
+      chamarBackend('copiarSecao', dadosEnvio).then(function (resultado) {
+        if (!resultado.ok) {
+          alert(resultado.erro || 'Não foi possível copiar a lista.');
+          return;
+        }
+
+        let checklistDestino = painel.checklists.find(c => c.id === resultado.idChecklistDestino);
+        if (checklistDestino) {
+          // Empurra pros MESMOS arrays (em vez de trocar por um array novo
+          // com concat) pra não perder a referência que itensAtuais usa
+          // quando esse é o checklist aberto na tela agora.
+          if (!checklistDestino.secoes) checklistDestino.secoes = [];
+          checklistDestino.secoes.push(resultado.secaoNova);
+          if (!checklistDestino.itens) checklistDestino.itens = [];
+          for (const itemNovo of (resultado.itens || [])) checklistDestino.itens.push(itemNovo);
+          // Se é o checklist que já está aberto na tela, atualiza na hora.
+          if (checklistAtual && checklistAtual.id === checklistDestino.id) {
+            renderizarItens();
+          }
+        } else {
+          checklistDestino = { id: resultado.idChecklistDestino, nome: resultado.nomeChecklistDestino, itens: resultado.itens || [], secoes: [resultado.secaoNova] };
+          painel.checklists.push(checklistDestino);
+        }
+
+        fecharCopiarSecao();
+        alert('Lista copiada pra "' + resultado.nomeChecklistDestino + '".');
+      }).catch(function () {
+        alert('Falha de conexão ao copiar a lista.');
+      }).finally(function () {
+        botao.disabled = false;
       });
     }
 

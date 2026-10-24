@@ -772,6 +772,7 @@ body.tela-login {
 :root[data-theme="light"] .icone-lixeira,
 :root[data-theme="light"] .icone-marcar-secao,
 :root[data-theme="light"] .icone-limpar-secao,
+:root[data-theme="light"] .icone-copiar-secao,
 :root[data-theme="light"] .icone-pdf,
 :root[data-theme="light"] .icone-duplicar,
 :root[data-theme="light"] .icone-config {
@@ -784,6 +785,7 @@ body.tela-login {
 :root[data-theme="dark"] .icone-lixeira,
 :root[data-theme="dark"] .icone-marcar-secao,
 :root[data-theme="dark"] .icone-limpar-secao,
+:root[data-theme="dark"] .icone-copiar-secao,
 :root[data-theme="dark"] .icone-pdf,
 :root[data-theme="dark"] .icone-duplicar,
 :root[data-theme="dark"] .icone-config {
@@ -1358,6 +1360,37 @@ body.tela-login {
   border-top: 1px solid var(--borda-dourada);
 }
 .linha-opcao:first-of-type { border-top: none; }
+.linha-destino {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-top: 1px solid var(--borda-dourada);
+}
+.linha-destino:first-of-type { border-top: none; }
+.opcao-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--texto-card);
+  cursor: pointer;
+}
+.opcao-radio input[type="radio"] {
+  accent-color: var(--classico);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.linha-destino select.select-hora {
+  width: 100%;
+}
+.linha-destino input:disabled,
+.linha-destino select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .opcao-texto strong { display: block; font-size: 13.5px; color: var(--texto-card); font-weight: 700; margin-bottom: 3px; }
 .opcao-texto span { display: block; font-size: 11.5px; color: var(--texto-suave-card); line-height: 1.5; }
 .janela-botoes {
@@ -1534,7 +1567,8 @@ body.tela-login {
   margin-left: 0;
 }
 .icone-marcar-secao,
-.icone-limpar-secao {
+.icone-limpar-secao,
+.icone-copiar-secao {
   width: 26px;
   height: 26px;
   border-radius: 8px;
@@ -1548,6 +1582,7 @@ body.tela-login {
   cursor: pointer;
   flex-shrink: 0;
 }
+.icone-copiar-secao svg { display: block; width: 13px; height: 13px; }
 .secao-cabecalho .icone-seta-secao {
   margin-left: auto;
 }
