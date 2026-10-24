@@ -132,6 +132,12 @@
                     </g>
                   </svg>
                 </button>
+                <button class="icone-duplicar" id="botaoDuplicarChecklist" onclick="duplicarChecklistAtual()" title="Duplicar checklist (copia tudo pra uma lista nova)">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="8" y="8" width="13" height="13" rx="2"></rect>
+                    <path d="M4 16V4a2 2 0 0 1 2-2h10"></path>
+                  </svg>
+                </button>
                 <button class="icone-renomear" id="botaoEditarLista" onclick="alternarEdicaoLista()" title="Habilitar edição">&#9999;</button>
                 <button class="icone-lixeira" onclick="excluirChecklistAtual()" title="Excluir checklist">&#128465;</button>
               </span>
@@ -1956,6 +1962,39 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
       } else {
         enviar(null);
       }
+    }
+
+    // Cria uma cópia completa do checklist atual (itens, seções e ordem),
+    // tudo desmarcado — pra guardar um "modelo" completo (ex: Compras, com
+    // tudo que você já costuma comprar) e usar a cópia só pra riscar o que
+    // precisa dessa vez, sem nunca precisar digitar tudo de novo e sem a
+    // lista ficar poluída com item que não vai comprar. A cópia NÃO leva
+    // fotos dos itens nem as configurações de aviso na agenda — começa
+    // limpa nesse sentido.
+    function duplicarChecklistAtual() {
+      const sugestaoNome = checklistAtual.nome + ' 2';
+      const nome = prompt('Nome do novo checklist (cópia completa de "' + checklistAtual.nome + '"):', sugestaoNome);
+      if (!nome || !nome.trim()) return;
+
+      const botao = document.getElementById('botaoDuplicarChecklist');
+      botao.disabled = true;
+
+      chamarBackend('duplicarChecklist', { idPlanilha: idPlanilha, idChecklist: checklistAtual.id, nome: nome.trim() })
+        .then(function (resultado) {
+          if (!resultado.ok) {
+            alert(resultado.erro || 'Não foi possível duplicar o checklist.');
+            return;
+          }
+          const novoChecklist = { id: resultado.id, nome: resultado.nome, itens: resultado.itens || [], secoes: resultado.secoes || [] };
+          painel.checklists.push(novoChecklist);
+          abrirChecklist(novoChecklist.id);
+        })
+        .catch(function () {
+          alert('Falha de conexão ao duplicar o checklist.');
+        })
+        .finally(function () {
+          botao.disabled = false;
+        });
     }
 
     function alternarItem(idItem) {
