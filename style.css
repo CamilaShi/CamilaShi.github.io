@@ -773,6 +773,7 @@ body.tela-login {
 :root[data-theme="light"] .icone-marcar-secao,
 :root[data-theme="light"] .icone-limpar-secao,
 :root[data-theme="light"] .icone-pdf,
+:root[data-theme="light"] .icone-duplicar,
 :root[data-theme="light"] .icone-config {
   background: var(--pergaminho);
 }
@@ -784,6 +785,7 @@ body.tela-login {
 :root[data-theme="dark"] .icone-marcar-secao,
 :root[data-theme="dark"] .icone-limpar-secao,
 :root[data-theme="dark"] .icone-pdf,
+:root[data-theme="dark"] .icone-duplicar,
 :root[data-theme="dark"] .icone-config {
   background: transparent;
 }
@@ -1261,6 +1263,7 @@ body.tela-login {
 .icone-lixeira,
 .icone-renomear,
 .icone-pdf,
+.icone-duplicar,
 .icone-config {
   width: 34px;
   height: 34px;
@@ -1278,8 +1281,14 @@ body.tela-login {
 .icone-lixeira:hover,
 .icone-renomear:hover,
 .icone-pdf:hover,
+.icone-duplicar:hover,
 .icone-config:hover {
   transform: translateY(-1px);
+}
+.icone-duplicar:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
 }
 
 .icone-lixeira {
@@ -1303,6 +1312,12 @@ body.tela-login {
   color: var(--texto-dourado-card);
 }
 .icone-config svg { display: block; width: 18px; height: 18px; }
+
+.icone-duplicar {
+  background: var(--vidro-icone);
+  color: var(--texto-dourado-card);
+}
+.icone-duplicar svg { display: block; width: 18px; height: 18px; }
 
 /* ===== Janela de configurações do checklist (histórico / zerar diário) ===== */
 .janela-overlay {
