@@ -1714,12 +1714,16 @@ input.campo-nova-secao:focus {
   height: 14px;
   padding: 0 2px;
   border-radius: 7px;
-  background: var(--classico);
+  background: var(--sage-escuro);
   color: var(--pergaminho);
   font-size: 9px;
   font-weight: 700;
   line-height: 14px;
   text-align: center;
+}
+:root[data-theme="dark"] .icone-indicador-fotos .qtd-indicador-fotos {
+  background: var(--nav-ativo-bg);
+  color: var(--classico);
 }
 .menu-item-dropdown {
   position: absolute;
