@@ -1683,6 +1683,44 @@ input.campo-nova-secao:focus {
   background: var(--vidro-icone);
   color: var(--texto-dourado-card);
 }
+
+/* Indicador de fotos anexadas: aparece antes dos três pontinhos só
+   quando o item já tem alguma foto salva. Clicar nele também abre a
+   galeria, sem precisar passar pelo menu. */
+.icone-indicador-fotos {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--texto-dourado-card);
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.icone-indicador-fotos:hover {
+  background: var(--vidro-icone);
+}
+.icone-indicador-fotos .qtd-indicador-fotos {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 2px;
+  border-radius: 7px;
+  background: var(--classico);
+  color: var(--pergaminho);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
 .menu-item-dropdown {
   position: absolute;
   right: 0;

@@ -1213,12 +1213,21 @@
       linha.appendChild(caixa);
       linha.appendChild(texto);
 
+      const qtdFotos = (item.fotos || []).length;
+      if (qtdFotos) {
+        const indicadorFotos = document.createElement('button');
+        indicadorFotos.className = 'icone-indicador-fotos';
+        indicadorFotos.innerHTML = '&#128247;<span class="qtd-indicador-fotos">' + qtdFotos + '</span>';
+        indicadorFotos.title = qtdFotos === 1 ? '1 foto anexada' : qtdFotos + ' fotos anexadas';
+        indicadorFotos.onclick = (ev) => { ev.stopPropagation(); fecharTodosMenusItem(); abrirGaleriaItem(item); };
+        linha.appendChild(indicadorFotos);
+      }
+
       const dropdown = document.createElement('div');
       dropdown.className = 'menu-item-dropdown';
 
       const btnFotos = document.createElement('button');
       btnFotos.className = 'opcao-fotos';
-      const qtdFotos = (item.fotos || []).length;
       btnFotos.innerHTML = '&#128247; Fotos' + (qtdFotos ? ' (' + qtdFotos + ')' : '');
       btnFotos.onclick = (ev) => { ev.stopPropagation(); fecharTodosMenusItem(); abrirGaleriaItem(item); };
 
