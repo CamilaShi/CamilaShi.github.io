@@ -302,6 +302,13 @@
         <input type="text" id="campoNomeNovoChecklistDestino" class="campo-nova-secao" placeholder="Nome do novo checklist..." disabled>
       </div>
 
+      <div class="linha-destino">
+        <label class="opcao-radio">
+          <input type="radio" name="destinoCopiarSecao" id="radioDestinoTexto" onchange="atualizarDestinoCopiarSecao()">
+          Copiar como texto (pra colar no WhatsApp, bloco de notas...)
+        </label>
+      </div>
+
       <div class="janela-botoes">
         <button class="botao-fechar" onclick="fecharCopiarSecao()">Cancelar</button>
         <button class="botao-salvar" id="botaoConfirmarCopiarSecao" onclick="confirmarCopiarSecao()">Copiar</button>
@@ -1776,6 +1783,7 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
 
       document.getElementById('radioDestinoExistente').checked = true;
       document.getElementById('radioDestinoNovo').checked = false;
+      document.getElementById('radioDestinoTexto').checked = false;
       document.getElementById('campoNomeNovoChecklistDestino').value = '';
       atualizarDestinoCopiarSecao();
 
@@ -1789,12 +1797,58 @@ const LOGO_PDF_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHgAAAB4C
 
     function atualizarDestinoCopiarSecao() {
       const existente = document.getElementById('radioDestinoExistente').checked;
+      const texto = document.getElementById('radioDestinoTexto').checked;
       document.getElementById('selectChecklistDestino').disabled = !existente;
-      document.getElementById('campoNomeNovoChecklistDestino').disabled = existente;
+      document.getElementById('campoNomeNovoChecklistDestino').disabled = existente || texto;
+      document.getElementById('botaoConfirmarCopiarSecao').textContent = texto ? 'Copiar texto' : 'Copiar';
+    }
+
+    // Copia o texto pra área de transferência, com um jeito alternativo
+    // (textarea escondido + execCommand) pra quando o navegador bloquear
+    // o jeito moderno — ex.: alguns navegadores dentro de apps/webview.
+    function copiarTextoParaAreaDeTransferencia(texto) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(texto).then(() => true).catch(() => copiarTextoViaFallback(texto));
+      }
+      return Promise.resolve(copiarTextoViaFallback(texto));
+    }
+
+    function copiarTextoViaFallback(texto) {
+      try {
+        const campoTemp = document.createElement('textarea');
+        campoTemp.value = texto;
+        campoTemp.style.position = 'fixed';
+        campoTemp.style.opacity = '0';
+        document.body.appendChild(campoTemp);
+        campoTemp.focus();
+        campoTemp.select();
+        const deuCerto = document.execCommand('copy');
+        document.body.removeChild(campoTemp);
+        return deuCerto;
+      } catch (e) {
+        return false;
+      }
     }
 
     function confirmarCopiarSecao() {
       if (!secaoCopiandoAtual) return;
+
+      const comoTexto = document.getElementById('radioDestinoTexto').checked;
+      if (comoTexto) {
+        const itensDaSecao = (checklistAtual.itens || [])
+          .filter(i => i.idSecao === secaoCopiandoAtual.id)
+          .sort((a, b) => a.ordem - b.ordem);
+        const texto = secaoCopiandoAtual.nome + '\n' + itensDaSecao.map(i => '- ' + i.descricao).join('\n');
+        copiarTextoParaAreaDeTransferencia(texto).then(function (deuCerto) {
+          if (deuCerto) {
+            fecharCopiarSecao();
+            alert('Lista copiada! Já pode colar onde quiser.');
+          } else {
+            alert('Não foi possível copiar automaticamente. Tente de novo.');
+          }
+        });
+        return;
+      }
 
       const existente = document.getElementById('radioDestinoExistente').checked;
       const dadosEnvio = { idPlanilha: idPlanilha, idSecaoOrigem: secaoCopiandoAtual.id };
