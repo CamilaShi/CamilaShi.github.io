@@ -1360,7 +1360,7 @@
         linhaNovo.className = 'linha-novo-item linha-novo-item-secao';
         const campo = document.createElement('textarea');
         campo.rows = 1;
-        campo.placeholder = 'Novo item (ou lista com vários itens)';
+        campo.placeholder = 'Novo item (ou pode colar uma lista com vários itens)';
         campo.dataset.secaoId = secao.id;
         campo.onkeydown = (ev) => { if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); adicionarItem(secao.id, campo); } };
         campo.addEventListener('input', () => processarPossivelColagemMultilinha(secao.id, campo));
